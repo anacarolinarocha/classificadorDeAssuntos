@@ -60,12 +60,15 @@ stopwords = nltk.corpus.stopwords.words('portuguese')
 stopwords.extend(['microsoftinternetexplorer','false','none','trabalho','juiz',
                   'reclamado','reclamada','autos','autor','excelentissimo',
                   'senhor','normal'])
+stopwords = [normalize('NFKD', palavra).encode('ASCII','ignore').decode('ASCII') for palavra in stopwords]
+
 
 nltk.download('rslp')
 stemmer = nltk.stem.RSLPStemmer()
 
 def processa_texto(texto):
         textoProcessado = BeautifulSoup(texto, 'html.parser').string
+        #TODO: ainda é preciso remover as tags XML e word....
         textoProcessado = normalize('NFKD', textoProcessado).encode('ASCII','ignore').decode('ASCII')
         textoProcessado = re.sub('[^a-zA-Z]',' ',textoProcessado)
         textoProcessado = textoProcessado.lower()
@@ -74,6 +77,10 @@ def processa_texto(texto):
         textoProcessado = [palavra for palavra in textoProcessado if len(palavra)>3]
         textoProcessado =  [stemmer.stem(palavra) for palavra in textoProcessado]
         return textoProcessado
+
+# =============================================================================
+# Cria matrix de confusão
+# =============================================================================
 
 
 def plot_confusion_matrix(cm, classes,
@@ -111,6 +118,21 @@ def plot_confusion_matrix(cm, classes,
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
 
+# =============================================================================
+# Cria grafico de barras
+# =============================================================================
+
+def cria_grafico_barra(data, title, ylabel, xlabel, fontSize, figSize_x, figSize_y, nomeImagem):
+    path = '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/'
+    fig = plt.figure(figsize=(figSize_x,figSize_y))
+    plt.rcParams.update({'font.size': fontSize})
+    data.plot.bar(ylim=0)
+    plt.title(title)
+    plt.ylabel(ylabel)
+    plt.xlabel(xlabel)
+    plt.show()
+    fig.savefig(path + nomeImagem + '.png')  
+    
 
 # =============================================================================
 # Multinomial Nayve Bayes
@@ -129,7 +151,7 @@ def naive_bayes(training_corpus,training_classes,test_corpus, test_classes, clas
     
     matrixHeaderString = 'Naive Bayes \nMacro Class ' + str(classNumber) +' - ' +featureType + '\nAccuracy: {0:.3f}'.format(accuracy_score(test_classes,predicted_NB))
     plot_confusion_matrix(confusion_matrix_NB, classesCM, title=matrixHeaderString)
-    figureFile = '/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/confusion_matrix_NB_mc'+ str(classNumber) +'_tfidf_testeFuncao.png'
+    figureFile = '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/confusion_matrix_NB_mc'+ str(classNumber) +'_tfidf_testeFuncao.png'
     plt.savefig(figureFile) 
     
     macro_precision,macro_recall,macro_fscore,macro_support=score(test_classes,predicted_NB,average='macro')
@@ -172,7 +194,7 @@ def svm(training_corpus,training_classes,test_corpus, test_classes, classNumber,
     classesCM = classes
     matrixHeaderString = 'SVM \nMacro Class ' + str(classNumber) +' - ' +featureType + '\nAccuracy: {0:.3f}'.format(accuracy_score(test_classes,predicted_SVM))
     plot_confusion_matrix(confusion_matrix_SVM, classesCM, title=matrixHeaderString)
-    figureFile = '/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/confusion_matrix_SVM_mc'+ str(classNumber) +'_tfidf_testeFuncao.png'
+    figureFile = '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/confusion_matrix_SVM_mc'+ str(classNumber) +'_tfidf_testeFuncao.png'
     plt.savefig(figureFile) 
     
     macro_precision,macro_recall,macro_fscore,macro_support=score(test_classes,predicted_SVM,average='macro')
@@ -222,7 +244,7 @@ def random_forest(training_corpus,training_classes,test_corpus, test_classes, cl
     classesCM = classes
     matrixHeaderString = 'Random Forest \nMacro Class ' + str(classNumber) +' - ' +featureType + '\nAccuracy: {0:.3f}'.format(accuracy_score(test_classes,predicted_RF))
     plot_confusion_matrix(confusion_matrix_RF, classesCM, title=matrixHeaderString)
-    figureFile = '/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/confusion_matrix_RF_mc'+ str(classNumber) +'_tfidf_testeFuncao.png'
+    figureFile = '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/confusion_matrix_RF_mc'+ str(classNumber) +'_tfidf_testeFuncao.png'
     plt.savefig(figureFile) 
     
     macro_precision,macro_recall,macro_fscore,macro_support=score(test_classes,predicted_RF,average='macro')
@@ -248,15 +270,10 @@ def mlp(training_corpus,training_classes,test_corpus, test_classes, classNumber,
     classesCM = classes
     
     param_grid = {
-        #TODO: tocar o 5,10,15 para 2,5
-        #'hidden_layer_sizes': [(2, 5), (5,10)],
         'hidden_layer_sizes': [(5,10),(5,5,5)],
         'max_iter': [100,200],
-        #'activation' : ['identity', 'logistic', 'tanh', 'relu'],
         'activation' : ['identity', 'logistic', 'tanh']
      }
-
-    
     
     clf_MLP = MLPClassifier( batch_size='auto',
            beta_1=0.9, beta_2=0.999, early_stopping=False,
@@ -264,12 +281,10 @@ def mlp(training_corpus,training_classes,test_corpus, test_classes, classNumber,
            solver='lbfgs', tol=0.0001, validation_fraction=0.1, verbose=False,
            warm_start=False)
     
-    
     clf_MLP_grid = GridSearchCV(estimator = clf_MLP_mc3_tfidf, param_grid = param_grid, 
                               cv = 3,  verbose = 2)
     
     clf_MLP_grid.fit(training_corpus, training_classes)    
-
     
     result_grid_MLP = pd.DataFrame(clf_MLP_grid.grid_scores_)
     
@@ -283,7 +298,7 @@ def mlp(training_corpus,training_classes,test_corpus, test_classes, classNumber,
     
     matrixHeaderString = 'Multilayer Perceptron \nMacro Class ' + str(classNumber) +' - ' +featureType + '\nAccuracy: {0:.3f}'.format(accuracy_score(test_classes,predicted_MLP))
     plot_confusion_matrix(confusion_matrix_MLP, classesCM, title=matrixHeaderString)
-    figureFile = '/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/confusion_matrix_MLP_mc'+ str(classNumber) +'_tfidf_testeFuncao.png'
+    figureFile = '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/confusion_matrix_MLP_mc'+ str(classNumber) +'_tfidf_testeFuncao.png'
     plt.savefig(figureFile) 
     
     macro_precision,macro_recall,macro_fscore,macro_support=score(test_classes,predicted_MLP,average='macro')
@@ -300,16 +315,6 @@ def mlp(training_corpus,training_classes,test_corpus, test_classes, classNumber,
                                             'Micro Recall':micro_recall,
                                             'Micro F1-Measure':micro_fscore}, ignore_index=True)   
     
-   
-    
-mlp(corpus_treinamento_mc3_tfidf_sparse,assuntosMacroClasse3_Treinamento.cd_assunto_nivel_2,corpus_teste_mc3_tfidf_sparse, assuntosMacroClasse3_Teste.cd_assunto_nivel_2, 3,classes_mc3,'TFIDF')
-mlp(corpus_treinamento_mc2_tfidf_sparse,assuntosMacroClasse2_Treinamento.cd_assunto_nivel_2,corpus_teste_mc2_tfidf_sparse, assuntosMacroClasse2_Teste.cd_assunto_nivel_2, 2,classes_mc2,'TFIDF')
-mlp(corpus_treinamento_mc1_tfidf_sparse,assuntosMacroClasse1_Treinamento.cd_assunto_nivel_2,corpus_teste_mc1_tfidf_sparse, assuntosMacroClasse1_Teste.cd_assunto_nivel_2, 1,classes_mc1,'TFIDF')
-
-
-
-    
-    
 ##############################################################################
 # BUSCA OS DADOS 
 ##############################################################################
@@ -320,7 +325,7 @@ solrDataAnalise = solr.query('classificacaoDeDocumentos_hierarquiaCompleta',{
 dfGeral = pd.DataFrame(solrDataAnalise.docs)    
 del(solrDataAnalise)
 #-----------------------------------------------------------------------------
-# Verifica a distribuição dos dados
+# Verifica a distribuição dos dados para assunto de nível 2
 #-----------------------------------------------------------------------------
 fig = plt.figure(figsize=(20,5))
 plt.rcParams.update({'font.size': 10})
@@ -329,7 +334,7 @@ plt.title('Distribuição geral dos dados')
 plt.ylabel('Quantidade de Documentos')
 plt.xlabel('Código do assunto')
 plt.show()
-fig.savefig('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Geral.png')  
+fig.savefig('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Geral.png')  
 
 
 plt.subplot(212)
@@ -359,7 +364,7 @@ dfGeral.groupby('cd_assunto_nivel_5').id_processo_documento.count().plot.bar(yli
 plt.gca().axes.get_xaxis().set_visible(False)
 plt.show()
 #TODO:tirar print manual
-fig.savefig('todo/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Processo_por_nivel.png')  
+fig.savefig('todo/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_Distribuicao_De_Processos_Por_Nivel_Assunto.png')  
 
 #------------------------------------------------------------------------------
 # O problema se trata de uma uma classificação multi-classe com dasdos bastante 
@@ -370,105 +375,60 @@ fig.savefig('todo/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho
 #------------------------------------------------------------------------------
 quantidadesPorAssunto =  pd.DataFrame(dfGeral.groupby('cd_assunto_nivel_2').id_processo_documento.count().nlargest(70))
 quantidadesPorAssunto.reset_index(inplace=True)
-quantidadesPorAssunto.columns=['cd_assunto_nivel_2','quantidadeDocumentos']
+quantidadesPorAssunto.columns=['Códigos de Assunto - Nível 2','quantidadeDocumentos']
 codigosMacroClasse1 = quantidadesPorAssunto[(quantidadesPorAssunto['quantidadeDocumentos'] > 15000)]
 codigosMacroClasse2 = quantidadesPorAssunto[(quantidadesPorAssunto['quantidadeDocumentos'] > 1000) & (quantidadesPorAssunto['quantidadeDocumentos'] <15000)]
 codigosMacroClasse3 = quantidadesPorAssunto[(quantidadesPorAssunto['quantidadeDocumentos'] < 1000) & (quantidadesPorAssunto['quantidadeDocumentos'] >50)]
 codigosMacroClasse_excluidos = quantidadesPorAssunto[(quantidadesPorAssunto['quantidadeDocumentos'] < 51)]
 
-codigosMacroClasse1.groupby('cd_assunto_nivel_2').quantidadeDocumentos.sum()
+codigosMacroClasse1.groupby('Códigos de Assunto - Nível 2').quantidadeDocumentos.sum()
 codigosMacroClasse1.describe()
 codigosMacroClasse1.quantidadeDocumentos.sum()
 
-codigosMacroClasse2.groupby('cd_assunto_nivel_2').quantidadeDocumentos.sum()
+codigosMacroClasse2.groupby('Códigos de Assunto - Nível 2').quantidadeDocumentos.sum()
 codigosMacroClasse2.describe()
 codigosMacroClasse2.quantidadeDocumentos.sum()
 
-codigosMacroClasse3.groupby('cd_assunto_nivel_2').quantidadeDocumentos.sum()
+codigosMacroClasse3.groupby('Códigos de Assunto - Nível 2').quantidadeDocumentos.sum()
 codigosMacroClasse3.describe()
 codigosMacroClasse3.quantidadeDocumentos.sum()
 
-codigosMacroClasse_excluidos.groupby('cd_assunto_nivel_2').quantidadeDocumentos.sum()
+codigosMacroClasse_excluidos.groupby('Códigos de Assunto - Nível 2').quantidadeDocumentos.sum()
 codigosMacroClasse_excluidos.describe()
 codigosMacroClasse_excluidos.quantidadeDocumentos.sum()
 #-----------------------------------------------------------------------------
 # Verifica a distribuição dos dados por macroclasse
 #-----------------------------------------------------------------------------
-def cria_grafico_barra(data, title, ylabel, xlabel, fontSize, figSize_x, figSize_y, nomeImagem):
-    path = '/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/'
-    fig = plt.figure(figsize=(figSize_x,figSize_y))
-    plt.rcParams.update({'font.size': fontSize})
-    data.plot.bar(ylim=0)
-    plt.title(title)
-    plt.ylabel(ylabel)
-    plt.xlabel(xlabel)
-    plt.show()
-    fig.savefig(path + nomeImagem + '.png')  
-    
-
 cria_grafico_barra(codigosMacroClasse1.groupby('cd_assunto_nivel_2').quantidadeDocumentos.sum(),
                    'Quantidade de documentos na Macro Classe 1','Quantidade de Documentos','Código do assunto',10,10,4,'TRT15_2GRAU_DistribuicaoClasses_2Nivel_MC1')
 
 cria_grafico_barra(codigosMacroClasse2.groupby('cd_assunto_nivel_2').quantidadeDocumentos.sum(),
-                   'Quantidade de documentos na Macro Classe 1','Quantidade de Documentos','Código do assunto',10,10,4,'TRT15_2GRAU_DistribuicaoClasses_2Nivel_MC1')
+                   'Quantidade de documentos na Macro Classe 1','Quantidade de Documentos','Código do assunto',10,10,4,'TRT15_2GRAU_DistribuicaoClasses_2Nivel_MC2')
 
 cria_grafico_barra(codigosMacroClasse3.groupby('cd_assunto_nivel_2').quantidadeDocumentos.sum(),
-                   'Quantidade de documentos na Macro Classe 1','Quantidade de Documentos','Código do assunto',10,10,4,'TRT15_2GRAU_DistribuicaoClasses_2Nivel_MC1')
+                   'Quantidade de documentos na Macro Classe 1','Quantidade de Documentos','Código do assunto',10,10,4,'TRT15_2GRAU_DistribuicaoClasses_2Nivel_MC3')
         
-#TODO:parei aqui na refatoracao....
-
-fig = plt.figure(figsize=(10,4))
-plt.rcParams.update({'font.size': 10})
-codigosMacroClasse1.groupby('cd_assunto_nivel_2').quantidadeDocumentos.sum().plot.bar(ylim=0)
-plt.title('Quantidade de documentos na Macro Classe 1')
-plt.ylabel('Quantidade de Documentos')
-plt.xlabel('Código do assunto')
-plt.show()
-fig.savefig('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_MC1.png')  
-
-fig = plt.figure(figsize=(10,4))
-plt.rcParams.update({'font.size': 10})
-codigosMacroClasse2.groupby('cd_assunto_nivel_2').quantidadeDocumentos.sum().plot.bar(ylim=0)
-plt.title('Quantidade de documentos na Macro Classe 2')
-plt.ylabel('Quantidade de Documentos')
-plt.xlabel('Código do assunto')
-plt.show()
-fig.savefig('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_MC2.png')  
-
-fig = plt.figure(figsize=(10,4))
-plt.rcParams.update({'font.size': 10})
-codigosMacroClasse3.groupby('cd_assunto_nivel_2').quantidadeDocumentos.sum().plot.bar(ylim=0)
-plt.title('Quantidade de documentos na Macro Classe 3')
-plt.ylabel('Quantidade de Documentos')
-plt.xlabel('Código do assunto')
-plt.show()
-fig.savefig('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_MC3.png')  
-
-
-# Data for plotting
-
-# Create two subplots sharing y axis
-
 
 
 plt.figure(1,figsize=(8,3))
-plt.subplot(311)
-codigosMacroClasse1.groupby('cd_assunto_nivel_2').quantidadeDocumentos.sum().plot.bar(ylim=0)
-plt.gca().axes.get_xaxis().set_visible(False)
+fig = plt.figure()
+ax1 = fig.add_subplot(3,1,1)
+codigosMacroClasse1.groupby('Códigos de Assunto - Nível 2').quantidadeDocumentos.sum().plot.bar(ylim=0)
+#ax1.plot(range(10), 'b-')
 
-plt.subplot(312)
-codigosMacroClasse2.groupby('cd_assunto_nivel_2').quantidadeDocumentos.sum().plot.bar(ylim=0)
-plt.gca().axes.get_xaxis().set_visible(False)
-
-plt.subplot(313)
-codigosMacroClasse3.groupby('cd_assunto_nivel_2').quantidadeDocumentos.sum().plot.bar(ylim=0)
-plt.gca().axes.get_xaxis().set_visible(False)
-plt.show()
-#TODO:tirar print manual
-fig.savefig('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_MacroClasses.png')  
+ax2 = fig.add_subplot(3,1,2)
+codigosMacroClasse2.groupby('Códigos de Assunto - Nível 2').quantidadeDocumentos.sum().plot.bar(ylim=0)
 
 
+ax2 = fig.add_subplot(3,1,3)
+codigosMacroClasse3.groupby('Códigos de Assunto - Nível 2').quantidadeDocumentos.sum().plot.bar(ylim=0)
 
+# Save the full figure...
+fig.set_figheight(8)
+fig.legend('Distribuição de processos por macroclasses de assuntos de nível 2')
+fig.tight_layout()
+
+fig.savefig('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_Distribuica_Assuntos_2Nivel_Por_MacroClasses.png')  
 
 #-----------------------------------------------------------------------------
 # Separa e analisa conjunto de treinamento
@@ -487,7 +447,7 @@ plt.title('Distribuição dos dados de treinamento')
 plt.ylabel('Quantidade de Documentos')
 plt.xlabel('Código do assunto')
 plt.show()
-fig.savefig('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Treinamento_Geral.png')  
+fig.savefig('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Treinamento_Geral.png')  
 
 #-----------------------------------------------------------------------------
 # Separa e analisa conjunto de teste
@@ -507,7 +467,7 @@ plt.title('Distribuição dos dados de teste')
 plt.ylabel('Quantidade de Documentos')
 plt.xlabel('Código do assunto')
 plt.show()
-fig.savefig('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Teste_Geral.png')  
+fig.savefig('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Teste_Geral.png')  
 
 del(fig)
 
@@ -564,7 +524,7 @@ plt.title('Distribuição dos dados de treinamento')
 plt.ylabel('Quantidade de Documentos')
 plt.xlabel('Código do assunto')
 plt.show()
-fig.savefig('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Treinamento_MC1.png')  
+fig.savefig('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Treinamento_MC1.png')  
 
 #-----------------------------------------------------------------------------
 # Teste
@@ -595,7 +555,7 @@ plt.title('Distribuição dos dados de teste')
 plt.ylabel('Quantidade de Documentos')
 plt.xlabel('Código do assunto')
 plt.show()
-fig.savefig('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Teste_MC1.png')  
+fig.savefig('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Teste_MC1.png')  
 
 
 del(dfTreinamento_mc1,dfTreinamento_mc1_outros,dfTeste_mc1,dfTeste_mc1_outros,fig)
@@ -617,11 +577,11 @@ for resCursor in solr.cursor_query('classificacaoDeDocumentos_hierarquiaCompleta
     dicionarioParcial = corpora.Dictionary(listaProcessada)
     dicionarioFinal_mc1.merge_with(dicionarioParcial)
     print(time.time() - start_time)
-    with open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc1_Treinamento.csv", "a") as fp:
+    with open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc1_Treinamento.csv", "a") as fp:
         wr = csv.writer(fp, dialect='excel')
         for row in listaProcessada:
             wr.writerow(row)       
-    with open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc1_Treinamento backup.csv", "a") as fp:
+    with open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc1_Treinamento backup.csv", "a") as fp:
         wr = csv.writer(fp, dialect='excel')
         for row in listaProcessada:
             wr.writerow(row)       
@@ -636,7 +596,7 @@ for resCursor in solr.cursor_query('classificacaoDeDocumentos_hierarquiaCompleta
     dicionarioParcial = corpora.Dictionary(listaProcessada)
     dicionarioFinal_mc1.merge_with(dicionarioParcial)
     print(time.time() - start_time)
-    with open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc1_Treinamento.csv", "a") as fp:
+    with open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc1_Treinamento.csv", "a") as fp:
         wr = csv.writer(fp, dialect='excel')
         for row in listaProcessada:
             wr.writerow(row)       
@@ -653,7 +613,7 @@ for resCursor in solr.cursor_query('classificacaoDeDocumentos_hierarquiaCompleta
     listaProcessada = Parallel(n_jobs = 7)(delayed(processa_texto)(documento.get('tx_conteudo_documento')) for documento in resCursor.docs)
     dicionarioParcial = corpora.Dictionary(listaProcessada)
     dicionarioFinal_mc1.merge_with(dicionarioParcial)
-    with open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc1_Teste.csv", "a") as fp:
+    with open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc1_Teste.csv", "a") as fp:
         wr = csv.writer(fp, dialect='excel')
         for row in listaProcessada:
             wr.writerow(row)
@@ -669,7 +629,7 @@ for resCursor in solr.cursor_query('classificacaoDeDocumentos_hierarquiaCompleta
     listaProcessada = Parallel(n_jobs = 7)(delayed(processa_texto)(documento.get('tx_conteudo_documento')) for documento in resCursor.docs)
     dicionarioParcial = corpora.Dictionary(listaProcessada)
     dicionarioFinal_mc1.merge_with(dicionarioParcial)
-    with open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc1_Teste.csv", "a") as fp:
+    with open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc1_Teste.csv", "a") as fp:
         wr = csv.writer(fp, dialect='excel')
         for row in listaProcessada:
             wr.writerow(row)
@@ -678,8 +638,8 @@ print(time.time() - start_time)
 # Salva dicionario
 #------------------------------------------------------------------------------
 
-dicionarioFinal_mc1.save('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/dicionarioFinal_mc1.dict')    
-#dicionarioFinal_mc1=corpora.Dictionary.load('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/dicionarioFinal_mc1.dict', mmap='r')
+dicionarioFinal_mc1.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/dicionarioFinal_mc1.dict')    
+#dicionarioFinal_mc1=corpora.Dictionary.load('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/dicionarioFinal_mc1.dict', mmap='r')
 print(dicionarioFinal_mc1)
 tamanho_dicionario = 181846
 del(dicionarioParcial,listaProcessada,row,stopwords)
@@ -700,27 +660,27 @@ gc.collect()
 start_time = time.time()        
 class MyCorpus_Treinamento_MacroClasse1(object):
     def __iter__(self):
-        for line in open('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc1_Treinamento.csv'):
+        for line in open('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc1_Treinamento.csv'):
             yield dicionarioFinal_mc1.doc2bow(line.split(','))
-corpora.MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc1_BOW.mm', MyCorpus_Treinamento_MacroClasse1())
+corpora.MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc1_BOW.mm', MyCorpus_Treinamento_MacroClasse1())
 print(time.time() - start_time)
 
 
-corpus_treinamento_mc1_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc1_BOW.mm'), tamanho_dicionario).transpose()
+corpus_treinamento_mc1_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc1_BOW.mm'), tamanho_dicionario).transpose()
 corpus_treinamento_mc1_bow_sparse.shape
 
 #------------------------------------------------------------------------------
 # Cria o corpus TF-IDF
 #------------------------------------------------------------------------------
 start_time = time.time()
-modeloTfidfTreinamento_mc1 = TfidfModel(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc1_BOW.mm') , id2word=dicionarioFinal_mc1, normalize=True)
-modeloTfidfTreinamento_mc1.save('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc1_TFIDF.tfidf_model')
-MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc1_TFIDF.mm', modeloTfidfTreinamento_mc1[corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc1_BOW.mm')], progress_cnt=10000)
+modeloTfidfTreinamento_mc1 = TfidfModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc1_BOW.mm') , id2word=dicionarioFinal_mc1, normalize=True)
+modeloTfidfTreinamento_mc1.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc1_TFIDF.tfidf_model')
+MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc1_TFIDF.mm', modeloTfidfTreinamento_mc1[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc1_BOW.mm')], progress_cnt=10000)
 del(modeloTfidfTreinamento_mc1)
 print(time.time() - start_time)
 
 
-corpus_treinamento_mc1_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc1_TFIDF.mm'), tamanho_dicionario).transpose()
+corpus_treinamento_mc1_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc1_TFIDF.mm'), tamanho_dicionario).transpose()
 corpus_treinamento_mc1_tfidf_sparse.shape
 
 #------------------------------------------------------------------------------
@@ -728,13 +688,13 @@ corpus_treinamento_mc1_tfidf_sparse.shape
 #------------------------------------------------------------------------------
 num_topics_mc1=300
 start_time = time.time()
-modeloLSITreinamento_mc1 = LsiModel(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc1_TFIDF.mm'), id2word=dicionarioFinal_mc1, num_topics=num_topics_mc1)
-modeloLSITreinamento_mc1.save('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc1_LSI.lsi_model')
-MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc1_LSI.mm', modeloLSITreinamento_mc1[corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc1_TFIDF.mm')], progress_cnt=10000)
+modeloLSITreinamento_mc1 = LsiModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc1_TFIDF.mm'), id2word=dicionarioFinal_mc1, num_topics=num_topics_mc1)
+modeloLSITreinamento_mc1.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc1_LSI.lsi_model')
+MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc1_LSI.mm', modeloLSITreinamento_mc1[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc1_TFIDF.mm')], progress_cnt=10000)
 del(modeloLSITreinamento_mc1)
 print(time.time() - start_time)
 
-corpus_treinamento_mc1_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc1_LSI.mm'), num_topics_mc1).transpose()
+corpus_treinamento_mc1_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc1_LSI.mm'), num_topics_mc1).transpose()
 corpus_treinamento_mc1_lsi_sparse.shape
 
 #------------------------------------------------------------------------------
@@ -753,7 +713,7 @@ assuntosMacroClasse1_Treinamento = assuntosMacroClasse1_Treinamento.append(assun
 
 #verifica se o numero de documentos bate com o numero de assuntos
 #assuntosMacroClasse1_Treinamento.shape
-#row_count = sum(1 for line in open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc1_Treinamento.csv"))
+#row_count = sum(1 for line in open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc1_Treinamento.csv"))
 
 assuntosMacroClasse1_Treinamento.reset_index(inplace=True)
 assuntosMacroClasse1_Treinamento.cd_assunto_nivel_2
@@ -773,24 +733,24 @@ gc.collect()
 start_time = time.time()
 class MyCorpus_Teste(object):
     def __iter__(self):
-        for line in open('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc1_Teste.csv'):
+        for line in open('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc1_Teste.csv'):
             yield dicionarioFinal_mc1.doc2bow(line.split(','))
-corpora.MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc1_BOW.mm', MyCorpus_Teste())
+corpora.MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc1_BOW.mm', MyCorpus_Teste())
 print(time.time() - start_time)       
 
-corpus_teste_mc1_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc1_BOW.mm'), tamanho_dicionario).transpose()
+corpus_teste_mc1_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc1_BOW.mm'), tamanho_dicionario).transpose()
 corpus_teste_mc1_bow_sparse.shape
   
 #------------------------------------------------------------------------------
 # Cria o corpus TF-IDF
 #------------------------------------------------------------------------------
 start_time = time.time()
-modeloTfidfTeste_mc1 = TfidfModel(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc1_BOW.mm'), id2word=dicionarioFinal_mc1, normalize=True)
-modeloTfidfTeste_mc1.save('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc1_TFIDF.tfidf_model')
-MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc1_TFIDF.mm', modeloTfidfTeste_mc1[corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc1_BOW.mm')], progress_cnt=10000)
+modeloTfidfTeste_mc1 = TfidfModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc1_BOW.mm'), id2word=dicionarioFinal_mc1, normalize=True)
+modeloTfidfTeste_mc1.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc1_TFIDF.tfidf_model')
+MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc1_TFIDF.mm', modeloTfidfTeste_mc1[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc1_BOW.mm')], progress_cnt=10000)
 print(time.time() - start_time)
 
-corpus_teste_mc1_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc1_TFIDF.mm'), tamanho_dicionario).transpose()
+corpus_teste_mc1_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc1_TFIDF.mm'), tamanho_dicionario).transpose()
 corpus_teste_mc1_tfidf_sparse.shape
      
 
@@ -800,13 +760,13 @@ corpus_teste_mc1_tfidf_sparse.shape
 #------------------------------------------------------------------------------
 num_topics_mc1=300
 start_time = time.time()
-modeloLSITeste_mc1 = LsiModel(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc1_TFIDF.mm'), id2word=dicionarioFinal_mc1, num_topics=num_topics_mc1)
-modeloLSITeste_mc1.save('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc1_LSI.lsi_model')
-MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc1_LSI.mm', modeloLSITeste_mc1[corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc1_TFIDF.mm')], progress_cnt=10000)
+modeloLSITeste_mc1 = LsiModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc1_TFIDF.mm'), id2word=dicionarioFinal_mc1, num_topics=num_topics_mc1)
+modeloLSITeste_mc1.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc1_LSI.lsi_model')
+MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc1_LSI.mm', modeloLSITeste_mc1[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc1_TFIDF.mm')], progress_cnt=10000)
 del(modeloLSITeste_mc1)
 print(time.time() - start_time)
 
-corpus_teste_mc1_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc1_TFIDF.mm'), num_topics_mc1).transpose()
+corpus_teste_mc1_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc1_TFIDF.mm'), num_topics_mc1).transpose()
 corpus_teste_mc1_lsi_sparse.shape
 
 #------------------------------------------------------------------------------
@@ -824,7 +784,7 @@ assuntosMacroClasse1_Teste = assuntosMacroClasse1_Teste.append(assuntosMacroClas
 
 #verifica se o numero de documentos bate com o numero de assuntos
 #assuntosMacroClasse1_Teste.shape
-#row_count = sum(1 for line in open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc1_Teste.csv"))
+#row_count = sum(1 for line in open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc1_Teste.csv"))
 
 assuntosMacroClasse1_Teste.reset_index(inplace=True)
 assuntosMacroClasse1_Teste.cd_assunto_nivel_2
@@ -913,7 +873,7 @@ fig = plt.figure(figsize=(10,10))
 plot_confusion_matrix(confusion_matrix_SVM_mc1_lsi, codigos,
                       title='SVM \nMacro Class 1 - TF-IDF\nAccuracy: {0:.3f}'.format(accuracy_score(assuntosMacroClasse1_Teste['cd_assunto_nivel_2'].astype('category').values,predicted_SVM_mc1_lsi)))
 
-plt.savefig('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/confusion_matrix_SVM_mc1_lsi.png') 
+plt.savefig('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/confusion_matrix_SVM_mc1_lsi.png') 
 
 macro_precision,macro_recall,macro_fscore,macro_support=score(assuntosMacroClasse1_Teste['cd_assunto_nivel_2'].astype('category').values,predicted_SVM_mc1_lsi,average='macro')
 micro_precision,micro_recall,micro_fscore,micro_support=score(assuntosMacroClasse1_Teste['cd_assunto_nivel_2'].astype('category').values,predicted_SVM_mc1_lsi,average='weighted')
@@ -974,7 +934,7 @@ plt.title('Distribuição dos dados de treinamento')
 plt.ylabel('Quantidade de Documentos')
 plt.xlabel('Código do assunto')
 plt.show()
-fig.savefig('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Treinamento_mc2.png')  
+fig.savefig('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Treinamento_mc2.png')  
 
 #-----------------------------------------------------------------------------
 # Teste
@@ -1005,7 +965,7 @@ plt.title('Distribuição dos dados de teste')
 plt.ylabel('Quantidade de Documentos')
 plt.xlabel('Código do assunto')
 plt.show()
-fig.savefig('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Teste_mc2.png')  
+fig.savefig('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Teste_mc2.png')  
 
 
 del(dfTreinamento_mc2,dfTreinamento_mc2_outros,dfTeste_mc2,dfTeste_mc2_outros,fig)
@@ -1027,11 +987,11 @@ for resCursor in solr.cursor_query('classificacaoDeDocumentos_hierarquiaCompleta
     dicionarioParcial = corpora.Dictionary(listaProcessada)
     dicionarioFinal_mc2.merge_with(dicionarioParcial)
     print(time.time() - start_time)
-    with open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc2_Treinamento.csv", "a") as fp:
+    with open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc2_Treinamento.csv", "a") as fp:
         wr = csv.writer(fp, dialect='excel')
         for row in listaProcessada:
             wr.writerow(row)       
-    with open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc2_Treinamento backup.csv", "a") as fp:
+    with open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc2_Treinamento backup.csv", "a") as fp:
         wr = csv.writer(fp, dialect='excel')
         for row in listaProcessada:
             wr.writerow(row)       
@@ -1046,7 +1006,7 @@ for resCursor in solr.cursor_query('classificacaoDeDocumentos_hierarquiaCompleta
     dicionarioParcial = corpora.Dictionary(listaProcessada)
     dicionarioFinal_mc2.merge_with(dicionarioParcial)
     print(time.time() - start_time)
-    with open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc2_Treinamento.csv", "a") as fp:
+    with open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc2_Treinamento.csv", "a") as fp:
         wr = csv.writer(fp, dialect='excel')
         for row in listaProcessada:
             wr.writerow(row)       
@@ -1063,7 +1023,7 @@ for resCursor in solr.cursor_query('classificacaoDeDocumentos_hierarquiaCompleta
     listaProcessada = Parallel(n_jobs = 7)(delayed(processa_texto)(documento.get('tx_conteudo_documento')) for documento in resCursor.docs)
     dicionarioParcial = corpora.Dictionary(listaProcessada)
     dicionarioFinal_mc2.merge_with(dicionarioParcial)
-    with open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc2_Teste.csv", "a") as fp:
+    with open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc2_Teste.csv", "a") as fp:
         wr = csv.writer(fp, dialect='excel')
         for row in listaProcessada:
             wr.writerow(row)     
@@ -1078,7 +1038,7 @@ for resCursor in solr.cursor_query('classificacaoDeDocumentos_hierarquiaCompleta
     listaProcessada = Parallel(n_jobs = 7)(delayed(processa_texto)(documento.get('tx_conteudo_documento')) for documento in resCursor.docs)
     dicionarioParcial = corpora.Dictionary(listaProcessada)
     dicionarioFinal_mc2.merge_with(dicionarioParcial)
-    with open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc2_Teste.csv", "a") as fp:
+    with open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc2_Teste.csv", "a") as fp:
         wr = csv.writer(fp, dialect='excel')
         for row in listaProcessada:
             wr.writerow(row)
@@ -1087,10 +1047,10 @@ print(time.time() - start_time)
 # Salva dicionario
 #------------------------------------------------------------------------------
 
-dicionarioFinal_mc2.save('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/dicionarioFinal_mc2.dict')    
+dicionarioFinal_mc2.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/dicionarioFinal_mc2.dict')    
 #aqui fiz o load do outro dicionario. acho que é que faria mais sentido.
-dicionarioFinal_mc2=corpora.Dictionary.load('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/dicionarioFinal_mc1.dict', mmap='r')
-#dicionarioFinal_mc2=corpora.Dictionary.load('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/dicionarioFinal_mc2.dict', mmap='r')
+dicionarioFinal_mc2=corpora.Dictionary.load('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/dicionarioFinal_mc1.dict', mmap='r')
+#dicionarioFinal_mc2=corpora.Dictionary.load('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/dicionarioFinal_mc2.dict', mmap='r')
 print(dicionarioFinal_mc2)
 tamanho_dicionario = 181846
 del(dicionarioParcial,listaProcessada,row,stopwords)
@@ -1111,27 +1071,27 @@ gc.collect()
 start_time = time.time()        
 class MyCorpus_Treinamento_MacroClasse2(object):
     def __iter__(self):
-        for line in open('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc2_Treinamento.csv'):
+        for line in open('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc2_Treinamento.csv'):
             yield dicionarioFinal_mc2.doc2bow(line.split(','))
-corpora.MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc2_BOW.mm', MyCorpus_Treinamento_MacroClasse2())
+corpora.MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc2_BOW.mm', MyCorpus_Treinamento_MacroClasse2())
 print(time.time() - start_time)
 
 
-corpus_treinamento_mc2_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc2_BOW.mm'), tamanho_dicionario).transpose()
+corpus_treinamento_mc2_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc2_BOW.mm'), tamanho_dicionario).transpose()
 corpus_treinamento_mc2_bow_sparse.shape
 
 #------------------------------------------------------------------------------
 # Cria o corpus TF-IDF
 #------------------------------------------------------------------------------
 start_time = time.time()
-modeloTfidfTreinamento_mc2 = TfidfModel(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc2_BOW.mm') , id2word=dicionarioFinal_mc2, normalize=True)
-modeloTfidfTreinamento_mc2.save('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc2_TFIDF.tfidf_model')
-MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc2_TFIDF.mm', modeloTfidfTreinamento_mc2[corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc2_BOW.mm')], progress_cnt=10000)
+modeloTfidfTreinamento_mc2 = TfidfModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc2_BOW.mm') , id2word=dicionarioFinal_mc2, normalize=True)
+modeloTfidfTreinamento_mc2.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc2_TFIDF.tfidf_model')
+MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc2_TFIDF.mm', modeloTfidfTreinamento_mc2[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc2_BOW.mm')], progress_cnt=10000)
 del(modeloTfidfTreinamento_mc2)
 print(time.time() - start_time)
 
 
-corpus_treinamento_mc2_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc2_TFIDF.mm'), tamanho_dicionario).transpose()
+corpus_treinamento_mc2_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc2_TFIDF.mm'), tamanho_dicionario).transpose()
 corpus_treinamento_mc2_tfidf_sparse.shape
 
 #------------------------------------------------------------------------------
@@ -1139,13 +1099,13 @@ corpus_treinamento_mc2_tfidf_sparse.shape
 #------------------------------------------------------------------------------
 num_topics_mc2=300
 start_time = time.time()
-modeloLSITreinamento_mc2 = LsiModel(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc2_TFIDF.mm'), id2word=dicionarioFinal_mc2, num_topics=num_topics_mc2)
-modeloLSITreinamento_mc2.save('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc2_LSI.lsi_model')
-MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc2_LSI.mm', modeloLSITreinamento_mc2[corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc2_TFIDF.mm')], progress_cnt=10000)
+modeloLSITreinamento_mc2 = LsiModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc2_TFIDF.mm'), id2word=dicionarioFinal_mc2, num_topics=num_topics_mc2)
+modeloLSITreinamento_mc2.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc2_LSI.lsi_model')
+MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc2_LSI.mm', modeloLSITreinamento_mc2[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc2_TFIDF.mm')], progress_cnt=10000)
 del(modeloLSITreinamento_mc2)
 print(time.time() - start_time)
 
-corpus_treinamento_mc2_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc2_LSI.mm'), num_topics_mc2).transpose()
+corpus_treinamento_mc2_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc2_LSI.mm'), num_topics_mc2).transpose()
 corpus_treinamento_mc2_lsi_sparse.shape
 
 #------------------------------------------------------------------------------
@@ -1164,7 +1124,7 @@ assuntosMacroClasse2_Treinamento = assuntosMacroClasse2_Treinamento.append(assun
 
 #verifica se o numero de documentos bate com o numero de assuntos
 #assuntosMacroClasse2_Treinamento.shape
-#row_count = sum(1 for line in open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc2_Treinamento.csv"))
+#row_count = sum(1 for line in open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc2_Treinamento.csv"))
 
 assuntosMacroClasse2_Treinamento.reset_index(inplace=True)
 
@@ -1183,24 +1143,24 @@ gc.collect()
 start_time = time.time()
 class MyCorpus_Teste(object):
     def __iter__(self):
-        for line in open('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc2_Teste.csv'):
+        for line in open('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc2_Teste.csv'):
             yield dicionarioFinal_mc2.doc2bow(line.split(','))
-corpora.MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc2_BOW.mm', MyCorpus_Teste())
+corpora.MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc2_BOW.mm', MyCorpus_Teste())
 print(time.time() - start_time)       
 
-corpus_teste_mc2_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc2_BOW.mm'), tamanho_dicionario).transpose()
+corpus_teste_mc2_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc2_BOW.mm'), tamanho_dicionario).transpose()
 corpus_teste_mc2_bow_sparse.shape
   
 #------------------------------------------------------------------------------
 # Cria o corpus TF-IDF
 #------------------------------------------------------------------------------
 start_time = time.time()
-modeloTfidfTeste_mc2 = TfidfModel(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc2_BOW.mm'), id2word=dicionarioFinal_mc2, normalize=True)
-modeloTfidfTeste_mc2.save('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc2_TFIDF.tfidf_model')
-MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc2_TFIDF.mm', modeloTfidfTeste_mc2[corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc2_BOW.mm')], progress_cnt=10000)
+modeloTfidfTeste_mc2 = TfidfModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc2_BOW.mm'), id2word=dicionarioFinal_mc2, normalize=True)
+modeloTfidfTeste_mc2.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc2_TFIDF.tfidf_model')
+MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc2_TFIDF.mm', modeloTfidfTeste_mc2[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc2_BOW.mm')], progress_cnt=10000)
 print(time.time() - start_time)
 
-corpus_teste_mc2_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc2_TFIDF.mm'), tamanho_dicionario).transpose()
+corpus_teste_mc2_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc2_TFIDF.mm'), tamanho_dicionario).transpose()
 corpus_teste_mc2_tfidf_sparse.shape
      
 
@@ -1210,13 +1170,13 @@ corpus_teste_mc2_tfidf_sparse.shape
 #------------------------------------------------------------------------------
 num_topics_mc2=300
 start_time = time.time()
-modeloLSITeste_mc2 = LsiModel(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc2_TFIDF.mm'), id2word=dicionarioFinal_mc2, num_topics=num_topics_mc2)
-modeloLSITeste_mc2.save('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc2_LSI.lsi_model')
-MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc2_LSI.mm', modeloLSITeste_mc2[corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc2_TFIDF.mm')], progress_cnt=10000)
+modeloLSITeste_mc2 = LsiModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc2_TFIDF.mm'), id2word=dicionarioFinal_mc2, num_topics=num_topics_mc2)
+modeloLSITeste_mc2.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc2_LSI.lsi_model')
+MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc2_LSI.mm', modeloLSITeste_mc2[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc2_TFIDF.mm')], progress_cnt=10000)
 del(modeloLSITeste_mc2)
 print(time.time() - start_time)
 
-corpus_teste_mc2_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc2_TFIDF.mm'), num_topics_mc2).transpose()
+corpus_teste_mc2_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc2_TFIDF.mm'), num_topics_mc2).transpose()
 corpus_teste_mc2_lsi_sparse.shape
 
 #------------------------------------------------------------------------------
@@ -1234,7 +1194,7 @@ assuntosMacroClasse2_Teste = assuntosMacroClasse2_Teste.append(assuntosMacroClas
 
 #verifica se o numero de documentos bate com o numero de assuntos
 #assuntosMacroClasse2_Teste.shape
-#row_count = sum(1 for line in open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc2_Teste.csv"))
+#row_count = sum(1 for line in open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc2_Teste.csv"))
 
 assuntosMacroClasse2_Teste.reset_index(inplace=True)
 assuntosMacroClasse2_Teste = assuntosMacroClasse2_Teste['cd_assunto_nivel_2'].astype('category').values
@@ -1322,7 +1282,7 @@ fig = plt.figure(figsize=(10,10))
 plot_confusion_matrix(confusion_matrix_SVM_mc2_lsi, codigos,
                       title='SVM \nMacro Class 2 - LSI\nAccuracy: {0:.3f}'.format(accuracy_score(assuntosMacroClasse2_Teste['cd_assunto_nivel_2'].astype('category').values,predicted_SVM_mc2_lsi)))
 
-plt.savefig('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/confusion_matrix_SVM_mc2_lsi.png') 
+plt.savefig('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/confusion_matrix_SVM_mc2_lsi.png') 
 
 macro_precision,macro_recall,macro_fscore,macro_support=score(assuntosMacroClasse2_Teste['cd_assunto_nivel_2'].astype('category').values,predicted_SVM_mc2_lsi,average='macro')
 micro_precision,micro_recall,micro_fscore,micro_support=score(assuntosMacroClasse2_Teste['cd_assunto_nivel_2'].astype('category').values,predicted_SVM_mc2_lsi,average='weighted')
@@ -1395,7 +1355,7 @@ plt.title('Distribuição dos dados de treinamento')
 plt.ylabel('Quantidade de Documentos')
 plt.xlabel('Código do assunto')
 plt.show()
-fig.savefig('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Treinamento_mc3.png')  
+fig.savefig('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Treinamento_mc3.png')  
 
 #-----------------------------------------------------------------------------
 # Teste
@@ -1426,7 +1386,7 @@ plt.title('Distribuição dos dados de teste')
 plt.ylabel('Quantidade de Documentos')
 plt.xlabel('Código do assunto')
 plt.show()
-fig.savefig('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Teste_mc3.png')  
+fig.savefig('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Teste_mc3.png')  
 
 
 del(dfTreinamento_mc3,dfTreinamento_mc3_outros,dfTeste_mc3,dfTeste_mc3_outros,fig)
@@ -1448,7 +1408,7 @@ for resCursor in solr.cursor_query('classificacaoDeDocumentos_hierarquiaCompleta
     #dicionarioParcial = corpora.Dictionary(listaProcessada)
     #dicionarioFinal_mc3.merge_with(dicionarioParcial)
     print(time.time() - start_time)
-    with open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc3_Treinamento.csv", "a") as fp:
+    with open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc3_Treinamento.csv", "a") as fp:
         wr = csv.writer(fp, dialect='excel')
         for row in listaProcessada:
             wr.writerow(row)           
@@ -1463,7 +1423,7 @@ for resCursor in solr.cursor_query('classificacaoDeDocumentos_hierarquiaCompleta
     #dicionarioParcial = corpora.Dictionary(listaProcessada)
     #dicionarioFinal_mc3.merge_with(dicionarioParcial)
     print(time.time() - start_time)
-    with open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc3_Treinamento.csv", "a") as fp:
+    with open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc3_Treinamento.csv", "a") as fp:
         wr = csv.writer(fp, dialect='excel')
         for row in listaProcessada:
             wr.writerow(row)       
@@ -1480,7 +1440,7 @@ for resCursor in solr.cursor_query('classificacaoDeDocumentos_hierarquiaCompleta
     listaProcessada = Parallel(n_jobs = 7)(delayed(processa_texto)(documento.get('tx_conteudo_documento')) for documento in resCursor.docs)
     #dicionarioParcial = corpora.Dictionary(listaProcessada)
     #dicionarioFinal_mc3.merge_with(dicionarioParcial)
-    with open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc3_Teste.csv", "a") as fp:
+    with open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc3_Teste.csv", "a") as fp:
         wr = csv.writer(fp, dialect='excel')
         for row in listaProcessada:
             wr.writerow(row)     
@@ -1495,7 +1455,7 @@ for resCursor in solr.cursor_query('classificacaoDeDocumentos_hierarquiaCompleta
     listaProcessada = Parallel(n_jobs = 7)(delayed(processa_texto)(documento.get('tx_conteudo_documento')) for documento in resCursor.docs)
     #dicionarioParcial = corpora.Dictionary(listaProcessada)
     #dicionarioFinal_mc3.merge_with(dicionarioParcial)
-    with open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc3_Teste.csv", "a") as fp:
+    with open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc3_Teste.csv", "a") as fp:
         wr = csv.writer(fp, dialect='excel')
         for row in listaProcessada:
             wr.writerow(row)
@@ -1504,10 +1464,10 @@ print(time.time() - start_time)
 # Salva dicionario
 #------------------------------------------------------------------------------
 
-dicionarioFinal_mc3.save('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/dicionarioFinal_mc3.dict')    
+dicionarioFinal_mc3.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/dicionarioFinal_mc3.dict')    
 #aqui fiz o load do outro dicionario. acho que é que faria mais sentido.
-dicionarioFinal_mc3=corpora.Dictionary.load('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/dicionarioFinal_mc1.dict', mmap='r')
-#dicionarioFinal_mc3=corpora.Dictionary.load('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/dicionarioFinal_mc3.dict', mmap='r')
+dicionarioFinal_mc3=corpora.Dictionary.load('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/dicionarioFinal_mc1.dict', mmap='r')
+#dicionarioFinal_mc3=corpora.Dictionary.load('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/dicionarioFinal_mc3.dict', mmap='r')
 print(dicionarioFinal_mc3)
 tamanho_dicionario = 181846
 del(listaProcessada,row,stopwords)
@@ -1528,27 +1488,27 @@ gc.collect()
 start_time = time.time()        
 class MyCorpus_Treinamento_MacroClasse3(object):
     def __iter__(self):
-        for line in open('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc3_Treinamento.csv'):
+        for line in open('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc3_Treinamento.csv'):
             yield dicionarioFinal_mc3.doc2bow(line.split(','))
-corpora.MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc3_BOW.mm', MyCorpus_Treinamento_MacroClasse3())
+corpora.MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc3_BOW.mm', MyCorpus_Treinamento_MacroClasse3())
 print(time.time() - start_time)
 
 
-corpus_treinamento_mc3_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc3_BOW.mm'), tamanho_dicionario).transpose()
+corpus_treinamento_mc3_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc3_BOW.mm'), tamanho_dicionario).transpose()
 corpus_treinamento_mc3_bow_sparse.shape
 
 #------------------------------------------------------------------------------
 # Cria o corpus TF-IDF
 #------------------------------------------------------------------------------
 start_time = time.time()
-modeloTfidfTreinamento_mc3 = TfidfModel(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc3_BOW.mm') , id2word=dicionarioFinal_mc3, normalize=True)
-modeloTfidfTreinamento_mc3.save('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc3_TFIDF.tfidf_model')
-MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc3_TFIDF.mm', modeloTfidfTreinamento_mc3[corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc3_BOW.mm')], progress_cnt=10000)
+modeloTfidfTreinamento_mc3 = TfidfModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc3_BOW.mm') , id2word=dicionarioFinal_mc3, normalize=True)
+modeloTfidfTreinamento_mc3.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc3_TFIDF.tfidf_model')
+MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc3_TFIDF.mm', modeloTfidfTreinamento_mc3[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc3_BOW.mm')], progress_cnt=10000)
 del(modeloTfidfTreinamento_mc3)
 print(time.time() - start_time)
 
 
-corpus_treinamento_mc3_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc3_TFIDF.mm'), tamanho_dicionario).transpose()
+corpus_treinamento_mc3_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc3_TFIDF.mm'), tamanho_dicionario).transpose()
 corpus_treinamento_mc3_tfidf_sparse.shape
 
 #------------------------------------------------------------------------------
@@ -1556,13 +1516,13 @@ corpus_treinamento_mc3_tfidf_sparse.shape
 #------------------------------------------------------------------------------
 num_topics_mc3=300
 start_time = time.time()
-modeloLSITreinamento_mc3 = LsiModel(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc3_TFIDF.mm'), id2word=dicionarioFinal_mc3, num_topics=num_topics_mc3)
-modeloLSITreinamento_mc3.save('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc3_LSI.lsi_model')
-MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc3_LSI.mm', modeloLSITreinamento_mc3[corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc3_TFIDF.mm')], progress_cnt=10000)
+modeloLSITreinamento_mc3 = LsiModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc3_TFIDF.mm'), id2word=dicionarioFinal_mc3, num_topics=num_topics_mc3)
+modeloLSITreinamento_mc3.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc3_LSI.lsi_model')
+MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc3_LSI.mm', modeloLSITreinamento_mc3[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc3_TFIDF.mm')], progress_cnt=10000)
 del(modeloLSITreinamento_mc3)
 print(time.time() - start_time)
 
-corpus_treinamento_mc3_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTreinamento_mc3_LSI.mm'), num_topics_mc3).transpose()
+corpus_treinamento_mc3_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_mc3_LSI.mm'), num_topics_mc3).transpose()
 corpus_treinamento_mc3_lsi_sparse.shape
 
 #------------------------------------------------------------------------------
@@ -1582,7 +1542,7 @@ assuntosMacroClasse3_Treinamento = assuntosMacroClasse3_Treinamento.append(assun
 assuntosMacroClasse3_Treinamento.reset_index(inplace=True)
 #verifica se o numero de documentos bate com o numero de assuntos
 #assuntosMacroClasse3_Treinamento.shape
-#row_count = sum(1 for line in open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc3_Treinamento.csv"))
+#row_count = sum(1 for line in open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc3_Treinamento.csv"))
 
 
 assuntosMacroClasse3_Treinamento = assuntosMacroClasse3_Treinamento['cd_assunto_nivel_2'].astype('category').values
@@ -1600,25 +1560,25 @@ gc.collect()
 start_time = time.time()
 class MyCorpus_Teste(object):
     def __iter__(self):
-        for line in open('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc3_Teste.csv'):
+        for line in open('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc3_Teste.csv'):
             yield dicionarioFinal_mc3.doc2bow(line.split(','))
-corpora.MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc3_BOW.mm', MyCorpus_Teste())
+corpora.MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc3_BOW.mm', MyCorpus_Teste())
 print(time.time() - start_time)       
 
-corpus_teste_mc3_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc3_BOW.mm'), tamanho_dicionario).transpose()
+corpus_teste_mc3_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc3_BOW.mm'), tamanho_dicionario).transpose()
 corpus_teste_mc3_bow_sparse.shape
   
 #------------------------------------------------------------------------------
 # Cria o corpus TF-IDF
 #------------------------------------------------------------------------------
 start_time = time.time()
-modeloTfidfTeste_mc3 = TfidfModel(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc3_BOW.mm'), id2word=dicionarioFinal_mc3, normalize=True)
-modeloTfidfTeste_mc3.save('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc3_TFIDF.tfidf_model')
-MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc3_TFIDF.mm', modeloTfidfTeste_mc3[corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc3_BOW.mm')], progress_cnt=10000)
+modeloTfidfTeste_mc3 = TfidfModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc3_BOW.mm'), id2word=dicionarioFinal_mc3, normalize=True)
+modeloTfidfTeste_mc3.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc3_TFIDF.tfidf_model')
+MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc3_TFIDF.mm', modeloTfidfTeste_mc3[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc3_BOW.mm')], progress_cnt=10000)
 print(time.time() - start_time)
 
 
-corpus_teste_mc3_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc3_TFIDF.mm'), tamanho_dicionario).transpose()
+corpus_teste_mc3_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc3_TFIDF.mm'), tamanho_dicionario).transpose()
 corpus_teste_mc3_tfidf_sparse.shape
      
 
@@ -1628,13 +1588,13 @@ corpus_teste_mc3_tfidf_sparse.shape
 #------------------------------------------------------------------------------
 num_topics_mc3=300
 start_time = time.time()
-modeloLSITeste_mc3 = LsiModel(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc3_TFIDF.mm'), id2word=dicionarioFinal_mc3, num_topics=num_topics_mc3)
-modeloLSITeste_mc3.save('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc3_LSI.lsi_model')
-MmCorpus.serialize('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc3_LSI.mm', modeloLSITeste_mc3[corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc3_TFIDF.mm')], progress_cnt=10000)
+modeloLSITeste_mc3 = LsiModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc3_TFIDF.mm'), id2word=dicionarioFinal_mc3, num_topics=num_topics_mc3)
+modeloLSITeste_mc3.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc3_LSI.lsi_model')
+MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc3_LSI.mm', modeloLSITeste_mc3[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc3_TFIDF.mm')], progress_cnt=10000)
 del(modeloLSITeste_mc3)
 print(time.time() - start_time)
 
-corpus_teste_mc3_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/corpusTeste_mc3_TFIDF.mm'), num_topics_mc3).transpose()
+corpus_teste_mc3_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_mc3_TFIDF.mm'), num_topics_mc3).transpose()
 corpus_teste_mc3_lsi_sparse.shape
 
 #------------------------------------------------------------------------------
@@ -1653,7 +1613,7 @@ assuntosMacroClasse3_Teste = assuntosMacroClasse3_Teste.append(assuntosMacroClas
 assuntosMacroClasse3_Teste.reset_index(inplace=True)
 #verifica se o numero de documentos bate com o numero de assuntos
 #assuntosMacroClasse3_Teste.shape
-#row_count = sum(1 for line in open("/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/Data/corpus/listaProcessadaFinal_mc3_Teste.csv"))
+#row_count = sum(1 for line in open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc3_Teste.csv"))
 
 assuntosMacroClasse3_Teste = assuntosMacroClasse3_Teste['cd_assunto_nivel_2'].astype('category').values
 
@@ -1729,7 +1689,7 @@ fig = plt.figure(figsize=(10,10))
 plot_confusion_matrix(confusion_matrix_SVM_mc3_lsi, codigos,
                       title='SVM \nMacro Class 3 - LSI\nAccuracy: {0:.3f}'.format(accuracy_score(assuntosMacroClasse3_Teste['cd_assunto_nivel_2'].astype('category').values,predicted_SVM_mc3_lsi)))
 
-plt.savefig('/media/anarocha/DATA/Documentos/Mestrado/Matérias/MDM/Trabalho/imagens/confusion_matrix_SVM_mc3_lsi.png') 
+plt.savefig('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/confusion_matrix_SVM_mc3_lsi.png') 
 
 macro_precision,macro_recall,macro_fscore,macro_support=score(assuntosMacroClasse3_Teste['cd_assunto_nivel_2'].astype('category').values,predicted_SVM_mc3_lsi,average='macro')
 micro_precision,micro_recall,micro_fscore,micro_support=score(assuntosMacroClasse3_Teste['cd_assunto_nivel_2'].astype('category').values,predicted_SVM_mc3_lsi,average='weighted')
