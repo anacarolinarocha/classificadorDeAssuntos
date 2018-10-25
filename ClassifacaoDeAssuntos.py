@@ -443,8 +443,6 @@ analisaTodosOsNiveis(dfGeral, '/home/anarocha/Documentos/myGit/git/classificador
 # =============================================================================
 # Criando conjuntos de treinamento e teste estratificados
 # =============================================================================
-
-
 solrDataAnalise = solr.query('classificacaoDeDocumentos_hierarquiaCompleta',{
 'q':query,'fl':'id,id_processo_documento,cd_assunto_nivel_1,cd_assunto_nivel_2,cd_assunto_nivel_3,cd_assunto_nivel_4,cd_assunto_nivel_5', 'rows':'300000'
 })
@@ -455,20 +453,17 @@ df_idProcessos_treinamento, df_idProcessos_teste, df_codigoAssunto_treinamento, 
 # =============================================================================
 # Marca os elementos que serão usados para teste no Solr
 # =============================================================================
+def marcarDocumentosSolr(data, flag):
+    documentos = []
+    for ids in data:
+        doc = {'id': ids, 'isTeste':{'set': flag}}
+        documentos.append(doc)
+    solr.index_json('classificacaoDeDocumentos_hierarquiaCompleta',json.dumps(documentos))
+    solr.commit(openSearcher=True, collection='classificacaoDeDocumentos_hierarquiaCompleta')
 
-idsTeste = df_idProcessos_teste['id']
-documentosDeTeste = []
-for ids in idsTeste:
-    doc = {'id': ids, 'isTeste':{'set': 'true'}}
-    documentosDeTeste.append(doc)
-solr.index_json('classificacaoDeDocumentos_hierarquiaCompleta',json.dumps(documentosDeTeste))
-solr.commit(openSearcher=True, collection='classificacaoDeDocumentos_hierarquiaCompleta')
+marcarDocumentosSolr(dfGeral['id_processo_documento'], 'false')
+marcarDocumentosSolr(df_idProcessos_teste['id'], 'true')
 
-################################################################################################################################
-################################################################################################################################
-################################################################################################################################
-################################################################################################################################
-################################################################################################################################
 ################################################################################################################################
 ################################################################################################################################
 ################################################################################################################################
@@ -479,8 +474,8 @@ solr.commit(openSearcher=True, collection='classificacaoDeDocumentos_hierarquiaC
 # Processa conjunto de treinamento e de teste
 # =============================================================================
 
-queryTreinamento = 'tx_conteudo_documento:[* TO *] AND NOT isTeste:true'
-queryTeste  = 'tx_conteudo_documento:[* TO *] AND isTeste:true'
+queryTreinamento = query + ' AND NOT isTeste:true'
+queryTeste  = query + ' AND isTeste:true'
 ################################################################################################################################
 # BUSCA DADOS E CRIA O DICIONÁRIO
 ################################################################################################################################
@@ -564,16 +559,16 @@ corpus_treinamento_tfidf_sparse.shape
 #------------------------------------------------------------------------------
 # Cria o corpus LSI
 #------------------------------------------------------------------------------
-num_topics=300
-start_time = time.time()
-modeloLSITreinamento = LsiModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_TFIDF.mm'), id2word=dicionarioFinal, num_topics=num_topics)
-modeloLSITreinamento.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_LSI.lsi_model')
-MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_LSI.mm', modeloLSITreinamento[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_TFIDF.mm')], progress_cnt=10000)
-del(modeloLSITreinamento)
-print(time.time() - start_time)
-
-corpus_treinamento_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_LSI.mm'), num_topics).transpose()
-corpus_treinamento_lsi_sparse.shape
+#num_topics=300
+#start_time = time.time()
+#modeloLSITreinamento = LsiModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_TFIDF.mm'), id2word=dicionarioFinal, num_topics=num_topics)
+#modeloLSITreinamento.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_LSI.lsi_model')
+#MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_LSI.mm', modeloLSITreinamento[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_TFIDF.mm')], progress_cnt=10000)
+#del(modeloLSITreinamento)
+#print(time.time() - start_time)
+#
+#corpus_treinamento_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_LSI.mm'), num_topics).transpose()
+#corpus_treinamento_lsi_sparse.shape
 
 #------------------------------------------------------------------------------
 # Busca o target do conjunto de treinamento: assunto de nível 2
@@ -601,7 +596,7 @@ start_time = time.time()
 class MyCorpus_Teste_Doc2Bow(object):
     def __iter__(self):
         for line in open('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_Teste.csv'):
-            yield dicionarioFinal_mc1.doc2bow(line.split(','))
+            yield dicionarioFinal.doc2bow(line.split(','))
 corpora.MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_BOW.mm', MyCorpus_Teste_Doc2Bow())
 print(time.time() - start_time)       
 
@@ -623,16 +618,16 @@ corpus_teste_tfidf_sparse.shape
 #------------------------------------------------------------------------------
 # Cria o corpus LSI
 #------------------------------------------------------------------------------
-num_topics_mc1=300
-start_time = time.time()
-modeloLSITeste = LsiModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_TFIDF.mm'), id2word=dicionarioFinal, num_topics=num_topics)
-modeloLSITeste.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_LSI.lsi_model')
-MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_LSI.mm', modeloLSITeste[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_TFIDF.mm')], progress_cnt=10000)
-del(modeloLSITeste)
-print(time.time() - start_time)
-
-corpus_teste_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_TFIDF.mm'), num_topics).transpose()
-corpus_teste_lsi_sparse.shape
+#num_topics_mc1=300
+#start_time = time.time()
+#modeloLSITeste = LsiModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_TFIDF.mm'), id2word=dicionarioFinal, num_topics=num_topics)
+#modeloLSITeste.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_LSI.lsi_model')
+#MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_LSI.mm', modeloLSITeste[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_TFIDF.mm')], progress_cnt=10000)
+#del(modeloLSITeste)
+#print(time.time() - start_time)
+#
+#corpus_teste_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_TFIDF.mm'), num_topics).transpose()
+#corpus_teste_lsi_sparse.shape
 
 #------------------------------------------------------------------------------
 # Busca o target do conjunto de teste: assunto de nível 2
