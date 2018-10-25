@@ -56,19 +56,51 @@ from numpy.random import random, random_integers
 from sklearn.model_selection import train_test_split
 
 import json
-##############################################################################
-# DEFINE FUNÇÕES
-##############################################################################
-stopwords = nltk.corpus.stopwords.words('portuguese')
-stopwords.extend(['microsoftinternetexplorer','false','none','trabalho','juiz',
-                  'reclamado','reclamada','autos','autor','excelentissimo',
-                  'senhor','normal'])
-stopwords = [normalize('NFKD', palavra).encode('ASCII','ignore').decode('ASCII') for palavra in stopwords]
 
 
-nltk.download('rslp')
-stemmer = nltk.stem.RSLPStemmer()
 
+# =============================================================================
+# Funções uteis
+# =============================================================================
+def analisaTodosOsNiveis (dfGeral, path):
+    
+    fig = plt.figure()
+    ax1 = fig.add_subplot(5,1,1)
+    ax1.title.set_text('Nível 1')
+    dfGeral.groupby('cd_assunto_nivel_1').id_processo_documento.count().plot.bar(ylim=0)
+    plt.gca().axes.get_xaxis().set_visible(False)
+    
+    ax1 = fig.add_subplot(5,1,2)
+    ax1.title.set_text('Nível 2')
+    dfGeral.groupby('cd_assunto_nivel_2').id_processo_documento.count().plot.bar(ylim=0)
+    plt.gca().axes.get_xaxis().set_visible(False)
+    
+    ax1 = fig.add_subplot(5,1,3)
+    ax1.title.set_text('Nível 3')
+    plt.subplot(513)
+    dfGeral.groupby('cd_assunto_nivel_3').id_processo_documento.count().plot.bar(ylim=0)
+    plt.gca().axes.get_xaxis().set_visible(False)
+    
+    ax1 = fig.add_subplot(5,1,4)
+    ax1.title.set_text('Nível 4')
+    plt.subplot(514)
+    dfGeral.groupby('cd_assunto_nivel_4').id_processo_documento.count().plot.bar(ylim=0)
+    plt.gca().axes.get_xaxis().set_visible(False)
+    
+    ax1 = fig.add_subplot(5,1,5)
+    ax1.title.set_text('Nível 5')
+    plt.subplot(515)
+    dfGeral.groupby('cd_assunto_nivel_5').id_processo_documento.count().plot.bar(ylim=0)
+    plt.gca().axes.get_xaxis().set_visible(False)
+    
+    fig.set_figheight(15)
+    fig.set_figwidth(12)
+    fig.tight_layout(pad=3)
+    plt.show()
+
+# =============================================================================
+# Funçao de processamento do texto
+# =============================================================================
 def processa_texto(texto):
         textoProcessado = BeautifulSoup(texto, 'html.parser').string
         #TODO: ainda é preciso remover as tags XML e word....
@@ -327,123 +359,99 @@ def mlp(training_corpus,training_classes,test_corpus, test_classes, classNumber,
                                             'Micro Recall':micro_recall,
                                             'Micro F1-Measure':micro_fscore}, ignore_index=True)   
     
+# =============================================================================
+# Dinive variaveis globais
+# =============================================================================
+stopwords = nltk.corpus.stopwords.words('portuguese')
+stopwords.extend(['microsoftinternetexplorer','false','none','trabalho','juiz',
+                  'reclamado','reclamada','autos','autor','excelentissimo',
+                  'senhor','normal'])
+stopwords = [normalize('NFKD', palavra).encode('ASCII','ignore').decode('ASCII') for palavra in stopwords]
+
+
+nltk.download('rslp')
+stemmer = nltk.stem.RSLPStemmer()
+
+quantidadeMinimaDocumentos = 50;
+solr = SolrClient('http://localhost:8983/solr')
+
+
 ##############################################################################    
 ##############################################################################
-# BUSCA OS DADOS 
+# ANALISA OS DADOS
 ##############################################################################
 ##############################################################################
-solr = SolrClient('http://localhost:8983/solr')
+
+# =============================================================================
+# Retira dos dados aqueles que tem menos de 50 exemplares no nivel 3.
+# Além de ser necessário ter uma amostra representativa dos dados, o cross 
+# validation não funcionará bem se não houver uma amostra suficientemente grande
+# para popular cada fold.
+# =============================================================================
+query = 'tx_conteudo_documento:[* TO *]'
 solrDataAnalise = solr.query('classificacaoDeDocumentos_hierarquiaCompleta',{
-'q':'tx_conteudo_documento:[* TO *]','fl':'id_processo_documento,cd_assunto_nivel_1,cd_assunto_nivel_2,cd_assunto_nivel_3,cd_assunto_nivel_4,cd_assunto_nivel_5', 'rows':'300000'
+'q':query,'fl':'id_processo_documento,cd_assunto_nivel_1,cd_assunto_nivel_2,cd_assunto_nivel_3,cd_assunto_nivel_4,cd_assunto_nivel_5', 'rows':'300000'
 })
 dfGeral = pd.DataFrame(solrDataAnalise.docs)    
-del(solrDataAnalise)
+
+dfGeral_CountNivel2 = dfGeral.groupby('cd_assunto_nivel_3')[['id_processo_documento']].count()
+codigosAbaixoQuantidadeMinima = dfGeral_CountNivel2[dfGeral_CountNivel2['id_processo_documento'] < quantidadeMinimaDocumentos]
+codigosAbaixoQuantidadeMinima.reset_index(inplace=True)
+codigosAbaixoQuantidadeMinima = ' '.join(map(str, codigosAbaixoQuantidadeMinima['cd_assunto_nivel_3'])) 
+codigosAbaixoQuantidadeMinima = codigosAbaixoQuantidadeMinima.replace('.0', '')
+
+# =============================================================================
+# Recupera o conjunto de dados, já excluindo:
+# 1) os que tem menos que a quantidade minima
+# =============================================================================
+query = query + ' AND NOT cd_assunto_nivel_3:(' + codigosAbaixoQuantidadeMinima + ')'
+solrDataAnalise = solr.query('classificacaoDeDocumentos_hierarquiaCompleta',{
+'q':query,'fl':'id_processo_documento,cd_assunto_nivel_1,cd_assunto_nivel_2,cd_assunto_nivel_3,cd_assunto_nivel_4,cd_assunto_nivel_5', 'rows':'300000'
+})
+dfGeral = pd.DataFrame(solrDataAnalise.docs)  
+    
+analisaTodosOsNiveis(dfGeral, '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_Distribuicao_De_Processos_Por_Nivel_Assunto_ArvoreCompleta.png')
+
+# =============================================================================
+# Fazendo uma análise específica da subarvor do DIREITO DO TRABALHO (Código 864)
+# =============================================================================
+query = query + ' AND cd_assunto_nivel_1:864'
+solrDataAnalise = solr.query('classificacaoDeDocumentos_hierarquiaCompleta',{
+'q':query,'fl':'id_processo_documento,cd_assunto_nivel_1,cd_assunto_nivel_2,cd_assunto_nivel_3,cd_assunto_nivel_4,cd_assunto_nivel_5', 'rows':'300000'
+})
+dfGeral = pd.DataFrame(solrDataAnalise.docs)  
+    
+analisaTodosOsNiveis(dfGeral, '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_Distribuicao_De_Processos_Por_Nivel_Assunto_DiretoDoTrabalho.png')
+
 
 
 #USANDO FACETS.....
-solrDataAnalise = solr.query('classificacaoDeDocumentos_hierarquiaCompleta',{
-'q':'tx_conteudo_documento:[* TO *]',
-'rows':'10',
-'facet':True,
-'facet.field':'cd_assunto_nivel_2',
-'facet.mincount':'10'
-})
-columns = ['cd_assunto_nivel_2','count']
-facets = pd.DataFrame(columns=columns)
-facets['cd_assunto_nivel_2']= solrDataAnalise.get_facet_keys_as_list('cd_assunto_nivel_2')
-facets['count']= solrDataAnalise.get_facet_values_as_list('cd_assunto_nivel_2')
-dfFacet = pd.DataFrame(solrDataAnalise.facet_pivot)    
+#solrDataAnalise = solr.query('classificacaoDeDocumentos_hierarquiaCompleta',{
+#'q':'tx_conteudo_documento:[* TO *]',
+#'rows':'10',
+#'facet':True,
+#'facet.field':'cd_assunto_nivel_1',
+#'facet.mincount':'10'
+#})
+#columns = ['cd_assunto_nivel_1','count']
+#facets = pd.DataFrame(columns=columns)
+#facets['cd_assunto_nivel_2']= solrDataAnalise.get_facet_keys_as_list('cd_assunto_nivel_1')
+#facets['count']= solrDataAnalise.get_facet_values_as_list('cd_assunto_nivel_1')
+#dfFacet = pd.DataFrame(solrDataAnalise.facet_pivot)    
 
-#-----------------------------------------------------------------------------
-# Verifica a distribuição dos dados para assunto de nível 2
-#-----------------------------------------------------------------------------
-fig = plt.figure(figsize=(20,5))
-plt.rcParams.update({'font.size': 10})
-dfGeral.groupby('cd_assunto_nivel_2').id_processo_documento.count().plot.bar(ylim=0)
-plt.title('Distribuição geral dos dados')
-plt.ylabel('Quantidade de Documentos')
-plt.xlabel('Código do assunto')
-plt.show()
-fig.savefig('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_DistribuicaoClasses_2Nivel_Geral.png')  
-
-
-plt.subplot(212)
-dfGeral.groupby('cd_assunto_nivel_2').id_processo_documento.count().plot.bar(ylim=0)
-plt.gca().axes.get_xaxis().set_visible(False)
-
-
-plt.figure(1,figsize=(8,3))
-plt.subplot(511)
-dfGeral.groupby('cd_assunto_nivel_1').id_processo_documento.count().plot.bar(ylim=0)
-plt.gca().axes.get_xaxis().set_visible(False)
-
-plt.subplot(512)
-dfGeral.groupby('cd_assunto_nivel_2').id_processo_documento.count().plot.bar(ylim=0)
-plt.gca().axes.get_xaxis().set_visible(False)
-
-plt.subplot(513)
-dfGeral.groupby('cd_assunto_nivel_3').id_processo_documento.count().plot.bar(ylim=0)
-plt.gca().axes.get_xaxis().set_visible(False)
-
-plt.subplot(514)
-dfGeral.groupby('cd_assunto_nivel_4').id_processo_documento.count().plot.bar(ylim=0)
-plt.gca().axes.get_xaxis().set_visible(False)
-
-plt.subplot(515)
-dfGeral.groupby('cd_assunto_nivel_5').id_processo_documento.count().plot.bar(ylim=0)
-plt.gca().axes.get_xaxis().set_visible(False)
-plt.show()
-#TODO:tirar print manual
-fig.savefig('todo/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_Distribuicao_De_Processos_Por_Nivel_Assunto.png')  
 
 # =============================================================================
 # Criando conjuntos de treinamento e teste estratificados
 # =============================================================================
 
-query = 'tx_conteudo_documento:[* TO *]'
 
 solrDataAnalise = solr.query('classificacaoDeDocumentos_hierarquiaCompleta',{
 'q':query,'fl':'id,id_processo_documento,cd_assunto_nivel_1,cd_assunto_nivel_2,cd_assunto_nivel_3,cd_assunto_nivel_4,cd_assunto_nivel_5', 'rows':'300000'
 })
 df_idProcessos = pd.DataFrame(solrDataAnalise.docs)    
-df_idProcessos = df_idProcessos.groupby('cd_assunto_nivel_2').filter(lambda x: len(x) > 10)
-
 df_idProcessos_treinamento, df_idProcessos_teste, df_codigoAssunto_treinamento, df_codigoAssunto_teste = train_test_split(df_idProcessos[['id','id_processo_documento']], df_idProcessos['cd_assunto_nivel_2'],
                                                     stratify=df_idProcessos['cd_assunto_nivel_2'], 
-                                                    test_size=0.25)
-
-
-# =============================================================================
-# Analisando a distribuição de dados entre treinamento e teste - devem ser similares
-# =============================================================================
-df_codigoAssunto_treinamento= pd.DataFrame(df_codigoAssunto_treinamento)
-quantidadesPorAssunto_Treinamento =  pd.DataFrame(df_codigoAssunto_treinamento.groupby('cd_assunto_nivel_2').cd_assunto_nivel_2.count().nlargest(70))
-quantidadesPorAssunto_Treinamento.index.names = ['Códigos de Assunto - Nível 2']
-quantidadesPorAssunto_Treinamento.reset_index(inplace=True)
-quantidadesPorAssunto_Treinamento.columns=['Códigos de Assunto - Nível 2','quantidadeDocumentos']
-
-df_codigoAssunto_teste= pd.DataFrame(df_codigoAssunto_teste)
-quantidadesPorAssunto_Teste =  pd.DataFrame(df_codigoAssunto_teste.groupby('cd_assunto_nivel_2').cd_assunto_nivel_2.count().nlargest(70))
-quantidadesPorAssunto_Teste.index.names = ['Códigos de Assunto - Nível 2']
-quantidadesPorAssunto_Teste.reset_index(inplace=True)
-quantidadesPorAssunto_Teste.columns=['Códigos de Assunto - Nível 2','quantidadeDocumentos']
-
-
-fig = plt.figure()
-fig.suptitle("Análise dos conjuntos de treinamento e teste")
-
-ax1 = fig.add_subplot(2,1,1)
-ax1.title.set_text('Treinamento')
-quantidadesPorAssunto_Treinamento.groupby('Códigos de Assunto - Nível 2').quantidadeDocumentos.sum().plot.bar(ylim=0)
-
-ax2 = fig.add_subplot(2,1,2)
-ax2.title.set_text('Teste')
-quantidadesPorAssunto_Teste.groupby('Códigos de Assunto - Nível 2').quantidadeDocumentos.sum().plot.bar(ylim=0)
-
-fig.set_figheight(8)
-fig.set_figwidth(12)
-fig.tight_layout(pad=3)
-
+                                                    test_size=0.3)
 # =============================================================================
 # Marca os elementos que serão usados para teste no Solr
 # =============================================================================
