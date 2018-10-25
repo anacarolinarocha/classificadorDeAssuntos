@@ -33,7 +33,7 @@ import time
 from gensim import  matutils
 import gc
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.linear_model import SGDClassifier
+from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
 
@@ -54,6 +54,8 @@ from sklearn.model_selection import GridSearchCV
 from sklearn import grid_search
 from numpy.random import random, random_integers
 from sklearn.model_selection import train_test_split
+
+import json
 ##############################################################################
 # DEFINE FUNÇÕES
 ##############################################################################
@@ -137,13 +139,22 @@ def cria_grafico_barra(data, title, ylabel, xlabel, fontSize, figSize_x, figSize
 # =============================================================================
 # Multinomial Nayve Bayes
 # =============================================================================
-
-
 def naive_bayes(training_corpus,training_classes,test_corpus, test_classes, classNumber,classes,featureType):
     classesCM = []
     classesCM = classes
-    clf_NB = MultinomialNB(class_prior=None,fit_prior=True).fit(training_corpus, training_classes)
-
+    
+    param_grid = {
+        'fit_prior':[True, False],
+        'alpha':[0,1]
+    }
+    
+    clf_NB = MultinomialNB(random_state=0, class_weight='balanced')
+    clf_NB_grid = grid_search.GridSearchCV(estimator=clf_NB, param_grid=param_grid,
+                                         scoring='f1_weighted',n_jobs=7,cv=5)
+    
+    clf_NB_grid.fit(training_corpus, training_classes)
+    
+    clf_NB = clf_NB_grid.best_estimator_
     predicted_NB = clf_NB.predict(test_corpus)
     np.mean(predicted_NB == test_classes)
     
@@ -173,14 +184,14 @@ def naive_bayes(training_corpus,training_classes,test_corpus, test_classes, clas
 # =============================================================================
 def svm(training_corpus,training_classes,test_corpus, test_classes, classNumber,classes,featureType):
     param_grid = {
-        'loss': [ 'modified_huber', 'squared_hinge'],
-        'penalty': ['elasticnet','l2'],
-        'alpha': [1e-4,1e-3]
+        'kernel':['linear'],#, 'poly', 'rbf', 'sigmoid'],
+        'C': [0.1],#,10,100],
+        'gamma':[0.1],#,1,10,30]
         #'l1_ratio': [0, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 1],
     }
-    clf_SVM = SGDClassifier(random_state=0, class_weight='balanced',n_jobs=7)
+    clf_SVM = SVC(random_state=0, class_weight='balanced')
     clf_SVM_grid = grid_search.GridSearchCV(estimator=clf_SVM, param_grid=param_grid,
-                                         scoring='f1_weighted')
+                                         scoring='f1_weighted',n_jobs=7,cv=5)
     clf_SVM_grid.fit(training_corpus, training_classes)
     
     clf_SVM = clf_SVM_grid.best_estimator_
@@ -218,19 +229,17 @@ def svm(training_corpus,training_classes,test_corpus, test_classes, classNumber,
 def random_forest(training_corpus,training_classes,test_corpus, test_classes, classNumber,classes,featureType):
     
     param_grid = {
-        'max_depth': [50,75,100],
-        'class_weight':['balanced','balanced_subsample'],
-        'n_estimators':[300,400,600]
-        
+       'max_depth': [50,75,100],
+       'n_estimators':[100,300,600],
+       'min_samples_split':[5,10,30,50],
+       'min_samples_leaf':[5,10,30,50],
+       'criterion':['gini', 'entropy'],
+       'max_features':[0.2,0.5,1],     
+       'class_weight':['balanced','balanced_subsample']        
     }
-    #param_grid = {
-    #    'max_depth': [25,50],'class_weight':['balanced','balanced_subsample'],
-    #    'criterion': ['gini','entropy'],'min_weight_fraction_leaf':[0.0,0.5],
-    #    'bootstrap': [True,False] , 'max_features':['auto','log2'], 'n_estimators':[50,100]}
-    clf_RF = RandomForestClassifier(random_state=1986,n_jobs=7,max_leaf_nodes=None,max_features='auto',
-                                    min_samples_split=15, min_samples_leaf=50, bootstrap=False, criterion='gini')
+    clf_RF = RandomForestClassifier(random_state=1986,n_jobs=7,bootstrap=False)
     clf_RF_grid = grid_search.GridSearchCV(estimator=clf_RF, param_grid=param_grid,
-                                         scoring='f1_weighted', verbose=2)
+                                         scoring='f1_weighted', verbose=2,cv=5)
     clf_RF_grid.fit(training_corpus, training_classes)
 
     clf_RF = clf_RF_grid.best_estimator_
@@ -270,10 +279,12 @@ def mlp(training_corpus,training_classes,test_corpus, test_classes, classNumber,
     classesCM = classes
     
     param_grid = {
-        'hidden_layer_sizes': [(2,2)],
-        #'max_iter': [100,200],
-        'max_iter': [50]
-        #'activation' : ['identity', 'logistic'']
+        'hidden_layer_sizes':[(5,5), (5)],
+        'activation': ['identity', 'logistic', 'tanh', 'relu'],
+        'solver':['lbfgs', 'sgd', 'adam'],
+        'learning_rate':['constant', 'invscaling', 'adaptive'],
+        'learning_rate_init':[0.01,0.001,0.0001],
+        'momentum':[0.3,0.6,0.9]
      }
     
     clf_MLP = MLPClassifier( batch_size='auto',
@@ -283,11 +294,11 @@ def mlp(training_corpus,training_classes,test_corpus, test_classes, classNumber,
            warm_start=False)
     
     clf_MLP_grid = GridSearchCV(estimator = clf_MLP, param_grid = param_grid, 
-                             verbose = 2)
+                             verbose = 2,cv=5)
     
     clf_MLP_grid.fit(training_corpus, training_classes)    
     
-    result_grid_MLP = pd.DataFrame(clf_MLP_grid.grid_scores_)
+   # result_grid_MLP = pd.DataFrame(clf_MLP_grid.grid_scores_)
     
     clf_MLP = clf_MLP_grid.best_estimator_
     clf_MLP.fit(training_corpus, training_classes)
@@ -327,6 +338,21 @@ solrDataAnalise = solr.query('classificacaoDeDocumentos_hierarquiaCompleta',{
 })
 dfGeral = pd.DataFrame(solrDataAnalise.docs)    
 del(solrDataAnalise)
+
+
+#USANDO FACETS.....
+solrDataAnalise = solr.query('classificacaoDeDocumentos_hierarquiaCompleta',{
+'q':'tx_conteudo_documento:[* TO *]',
+'rows':'10',
+'facet':True,
+'facet.field':'cd_assunto_nivel_2',
+'facet.mincount':'10'
+})
+columns = ['cd_assunto_nivel_2','count']
+facets = pd.DataFrame(columns=columns)
+facets['cd_assunto_nivel_2']= solrDataAnalise.get_facet_keys_as_list('cd_assunto_nivel_2')
+facets['count']= solrDataAnalise.get_facet_values_as_list('cd_assunto_nivel_2')
+dfFacet = pd.DataFrame(solrDataAnalise.facet_pivot)    
 
 #-----------------------------------------------------------------------------
 # Verifica a distribuição dos dados para assunto de nível 2
@@ -421,7 +447,7 @@ fig.tight_layout(pad=3)
 # =============================================================================
 # Marca os elementos que serão usados para teste no Solr
 # =============================================================================
-import json
+
 idsTeste = df_idProcessos_teste['id']
 documentosDeTeste = []
 for ids in idsTeste:
@@ -446,7 +472,6 @@ solr.commit(openSearcher=True, collection='classificacaoDeDocumentos_hierarquiaC
 # =============================================================================
 
 queryTreinamento = 'tx_conteudo_documento:[* TO *] AND NOT isTeste:true'
-
 queryTeste  = 'tx_conteudo_documento:[* TO *] AND isTeste:true'
 ################################################################################################################################
 # BUSCA DADOS E CRIA O DICIONÁRIO
@@ -533,7 +558,7 @@ corpus_treinamento_tfidf_sparse.shape
 #------------------------------------------------------------------------------
 num_topics=300
 start_time = time.time()
-modeloLSITreinamento = LsiModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_TFIDF.mm'), id2word=dicionarioFinal_mc1, num_topics=num_topics)
+modeloLSITreinamento = LsiModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_TFIDF.mm'), id2word=dicionarioFinal, num_topics=num_topics)
 modeloLSITreinamento.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_LSI.lsi_model')
 MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_LSI.mm', modeloLSITreinamento[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_TFIDF.mm')], progress_cnt=10000)
 del(modeloLSITreinamento)
@@ -594,7 +619,7 @@ num_topics_mc1=300
 start_time = time.time()
 modeloLSITeste = LsiModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_TFIDF.mm'), id2word=dicionarioFinal, num_topics=num_topics)
 modeloLSITeste.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_LSI.lsi_model')
-MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_LSI.mm', modeloLSITeste_mc1[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_TFIDF.mm')], progress_cnt=10000)
+MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_LSI.mm', modeloLSITeste[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_TFIDF.mm')], progress_cnt=10000)
 del(modeloLSITeste)
 print(time.time() - start_time)
 
