@@ -6,8 +6,8 @@ Created on Fri Jun 22 17:09:43 2018
 
 @author: anarocha
 """
-import multiprocessing
-multiprocessing.set_start_method('forkserver')
+#import multiprocessing
+#multiprocessing.set_start_method('forkserver')
 from SolrClient import SolrClient
 import multiprocessing as mp
 
@@ -70,7 +70,7 @@ solrDataAnalise = solr.query('classificacaoDeDocumentos_hierarquiaCompleta',{
 })
 dfGeral = pd.DataFrame(solrDataAnalise.docs)  
     
-analisaTodosOsNiveis(dfGeral, '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_Distribuicao_De_Processos_Por_Nivel_Assunto_ArvoreCompleta.png')
+analisaTodosOsNiveis(dfGeral, './imagens/TRT15_2GRAU_Distribuicao_De_Processos_Por_Nivel_Assunto_ArvoreCompleta.png', 'Distribuição de Processo Por Nível de Assunto - Árvore Completa')
 
 # =============================================================================
 # Fazendo uma análise específica da subarvore do DIREITO DO TRABALHO (Código 864)
@@ -81,7 +81,7 @@ solrDataAnalise = solr.query('classificacaoDeDocumentos_hierarquiaCompleta',{
 })
 dfGeral = pd.DataFrame(solrDataAnalise.docs)  
     
-analisaTodosOsNiveis(dfGeral, '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/TRT15_2GRAU_Distribuicao_De_Processos_Por_Nivel_Assunto_DiretoDoTrabalho.png')
+analisaTodosOsNiveis(dfGeral, './imagens/TRT15_2GRAU_Distribuicao_De_Processos_Por_Nivel_Assunto_DiretoDoTrabalho.png', 'Distribuição de Processo Por Nível de Assunto - Árvore de Direito do Trabalho')
 
 
 
@@ -237,7 +237,7 @@ del(modeloTfidfTreinamento)
 print(time.time() - start_time)
 
 
-corpus_treinamento_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_TFIDF.mm'), tamanho_dicionario).transpose()
+corpus_treinamento_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('./Data/corpus/corpusTreinamento_TFIDF.mm'), tamanho_dicionario).transpose()
 corpus_treinamento_tfidf_sparse.shape
 
 #------------------------------------------------------------------------------
@@ -329,9 +329,6 @@ assuntos_Teste.shape
 # INDUÇÃO DE MODELOS 
 ################################################################################################################################
 
-# =============================================================================
-# TF-IDF
-# =============================================================================
 classes = pd.DataFrame(assuntos_Teste['cd_assunto_nivel_2'].astype('category').values.describe())
 classes.reset_index(inplace=True)
 classes = classes.categories.tolist()
@@ -348,6 +345,10 @@ naive_bayes(corpus_treinamento_tfidf_sparse,assuntos_Treinamento['cd_assunto_niv
 print('NB' + str(time.time() - start_time))
 
 start_time = time.time()
+mlp(corpus_treinamento_tfidf_sparse,assuntos_Treinamento['cd_assunto_nivel_2'],corpus_teste_tfidf_sparse,  assuntos_Teste['cd_assunto_nivel_2'], 1,classes,'TFIDF')
+print('mlp' + str(time.time() - start_time))
+
+start_time = time.time()
 svm(corpus_teste_tfidf_sparse,assuntos_Teste['cd_assunto_nivel_2'],corpus_teste_tfidf_sparse, assuntos_Teste['cd_assunto_nivel_2'], 1,classes,'TFIDF')
 print('SVM' + str(time.time() - start_time))
 
@@ -355,9 +356,7 @@ start_time = time.time()
 random_forest(corpus_treinamento_tfidf_sparse,assuntos_Treinamento['cd_assunto_nivel_2'],corpus_teste_tfidf_sparse,  assuntos_Teste['cd_assunto_nivel_2'], 1,classes,'TFIDF')
 print('RF' + str(time.time() - start_time))
 
-start_time = time.time()
-mlp(corpus_treinamento_tfidf_sparse,assuntos_Treinamento['cd_assunto_nivel_2'],corpus_teste_tfidf_sparse,  assuntos_Teste['cd_assunto_nivel_2'], 1,classes,'TFIDF')
-print('mlp' + str(time.time() - start_time))
+
 
 
     

@@ -55,11 +55,11 @@ avaliacaoFinal.columns=['Model','Features','Macro Precision', 'Macro Recall', 'M
 modelos=[]
 
 
-def analisaTodosOsNiveis (dfGeral, path):
+def analisaTodosOsNiveis (dfGeral, path, title):
     
     fig = plt.figure()
     ax1 = fig.add_subplot(5,1,1)
-    ax1.title.set_text('Nível 1')
+    ax1.title.set_text(title + '\n Nível 1')
     dfGeral.groupby('cd_assunto_nivel_1').id_processo_documento.count().plot.bar(ylim=0)
     plt.gca().axes.get_xaxis().set_visible(False)
     
@@ -88,8 +88,10 @@ def analisaTodosOsNiveis (dfGeral, path):
     
     fig.set_figheight(15)
     fig.set_figwidth(12)
-    fig.tight_layout(pad=3)
+    fig.tight_layout(pad=3)    
     plt.show()
+    fig.savefig(path) 
+
 
 # =============================================================================
 # Funçao de processamento do texto
@@ -175,7 +177,7 @@ def naive_bayes(training_corpus,training_classes,test_corpus, test_classes, clas
     
     clf_NB = MultinomialNB()
     clf_NB_grid = GridSearchCV(estimator=clf_NB, param_grid=param_grid,
-                                         scoring='f1_weighted',n_jobs=4,cv=5, verbose=4)
+                                         scoring='f1_weighted',n_jobs=5,cv=5, verbose=4)
     
     clf_NB_grid.fit(training_corpus, training_classes)
     
@@ -213,12 +215,12 @@ def naive_bayes(training_corpus,training_classes,test_corpus, test_classes, clas
 def svm(training_corpus,training_classes,test_corpus, test_classes, classNumber,classes,featureType):
     param_grid = {
         'kernel':['linear', 'poly', 'rbf', 'sigmoid'],
-        'C': [0.1,10,100],
-        'gamma':[0.1,5,10]
+        'C': [0.1,10],
+        'gamma':[0.1,1]
     }
     clf_SVM = SVC(random_state=0, class_weight='balanced')
     clf_SVM_grid = GridSearchCV(estimator=clf_SVM, param_grid=param_grid,
-                                         scoring='f1_weighted',cv=5, verbose=4)
+                                         scoring='f1_weighted',cv=5, verbose=4,n_jobs=5)
     clf_SVM_grid.fit(training_corpus, training_classes)
     
     clf_SVM = clf_SVM_grid.best_estimator_
@@ -266,7 +268,7 @@ def random_forest(training_corpus,training_classes,test_corpus, test_classes, cl
     }
     clf_RF = RandomForestClassifier(random_state=1986,bootstrap=False)
     clf_RF_grid = GridSearchCV(estimator=clf_RF, param_grid=param_grid,
-                                         scoring='f1_weighted',n_jobs=4,verbose=4,cv=5)
+                                         scoring='f1_weighted',n_jobs=5,verbose=4,cv=5)
     clf_RF_grid.fit(training_corpus, training_classes)
 
     clf_RF = clf_RF_grid.best_estimator_
@@ -309,18 +311,18 @@ def mlp(training_corpus,training_classes,test_corpus, test_classes, classNumber,
     classesCM = classes
     
     param_grid = {
-        'learning_rate_init':[0.01,0.001,0.0001],
+        'learning_rate_init':[0.01,0.001],
         'hidden_layer_sizes':[(5,5), (5)],
         'activation': ['identity', 'logistic', 'tanh', 'relu'],
-        'momentum':[0.4,0.8],
+        'momentum':[0.5],
         'solver':['lbfgs', 'sgd', 'adam'],
-        'learning_rate':['constant', 'invscaling', 'adaptive'],
+        'learning_rate':['adaptive'],
      }
     
     clf_MLP = MLPClassifier( batch_size='auto',
            beta_1=0.9, beta_2=0.999, early_stopping=False,
-            momentum=0.9,   random_state=1, 
-           solver='lbfgs', tol=0.0001, validation_fraction=0.1, verbose=False,
+             random_state=1, 
+            tol=0.0001, validation_fraction=0.1, verbose=False,
            warm_start=False)
     
     clf_MLP_grid = GridSearchCV(estimator = clf_MLP, param_grid = param_grid, 
