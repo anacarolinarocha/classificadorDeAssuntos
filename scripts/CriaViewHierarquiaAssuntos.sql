@@ -4,7 +4,7 @@
 -- SCRIPT PARA CRIAR A VIEW
 --##################################################################################################
 --##################################################################################################
-CREATE OR REPLACE VIEW vs_nivel_assunto AS 
+CREATE OR REPLACE VIEW pje_pte.vs_nivel_assunto AS 
 SELECT b.*,
 CASE 
 		WHEN b.nivel = '2' THEN 
