@@ -101,8 +101,7 @@ SELECT a.*,
 	WHERE in_ativo = 'S'
 ) AS b;
 
-ALTER TABLE vs_nivel_assunto
-	  OWNER TO pje_pte;
-	  
+ALTER TABLE pje_pte.vs_nivel_assunto OWNER TO pje;
+GRANT SELECT ON TABLE pje_pte.vs_nivel_assunto TO pjero_usuario_servico_pte; 
+GRANT SELECT ON pje.tb_assunto_trf       TO pjero_usuario_servico_pte;
 
-GRANT SELECT ON TABLE vs_nivel_assunto TO pjero_usuario_servico_pte;
