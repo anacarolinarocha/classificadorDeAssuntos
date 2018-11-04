@@ -14,6 +14,8 @@ import re
 import pandas as pd
 import numpy as np
 import itertools
+import time
+from datetime import timedelta
 
 import seaborn as sns
 from sklearn.naive_bayes import MultinomialNB
@@ -54,6 +56,79 @@ avaliacaoFinal.columns=['Model','Features','Macro Precision', 'Macro Recall', 'M
 
 modelos=[]
 
+assuntos = pd.read_csv('./Data/hierarquia_de_assuntos.csv')
+assuntos = assuntos.replace(np.nan, 0, regex=True)
+assuntosNivel1 = pd.Series(assuntos['cd_assunto_nivel_1'])
+assuntosNivel2 = pd.Series(assuntos['cd_assunto_nivel_2'])
+assuntosNivel3 = pd.Series(assuntos['cd_assunto_nivel_3'])
+assuntosNivel4 = pd.Series(assuntos['cd_assunto_nivel_4'])
+assuntosNivel5 = pd.Series(assuntos['cd_assunto_nivel_5'])
+
+# =============================================================================
+# Função para recuperar o nível de um assunto
+# =============================================================================
+def recuperaNivelAssunto(codigo):
+    global assuntos,assuntosNivel1,assuntosNivel2,assuntosNivel3,assuntosNivel4,assuntosNivel5
+    nivel = -1
+    if not assuntosNivel1[assuntosNivel1.isin([int(codigo)])].empty:
+        nivel=1
+    if not assuntosNivel2[assuntosNivel2.isin([int(codigo)])].empty:
+        nivel=2
+    if not assuntosNivel3[assuntosNivel3.isin([int(codigo)])].empty:
+        nivel=3
+    if not assuntosNivel4[assuntosNivel4.isin([int(codigo)])].empty:
+        nivel=4
+    if not assuntosNivel5[assuntosNivel5.isin([int(codigo)])].empty:
+        nivel=5
+    return nivel
+
+
+# =============================================================================
+# Função para recupearar o codigo de nivel X  de um assunto
+# =============================================================================
+def recuperaAssuntoNivelEspecifico(codigo, nivel):
+    global assuntos,assuntosNivel1,assuntosNivel2,assuntosNivel3,assuntosNivel4,assuntosNivel5
+    nivelInicial = recuperaNivelAssunto(codigo)
+    coluna='cd_assunto_nivel_'+str(nivelInicial)
+    index = int(assuntos[assuntos[coluna]==codigo].index[0])
+    cd_assunto = assuntos['cd_assunto_nivel_' + str(nivel)][index]
+    return int(cd_assunto)
+
+# =============================================================================
+# Função que recupera a hieraria de assuntos d eum datafram que contenha um cd_assunto_trf
+# =============================================================================
+    
+
+def recuperaHierarquiaAssuntos(df):
+    start_time = time.time()
+    for i, row in df.iterrows():
+        df.set_value(i,'cd_assunto_nivel_1',recuperaAssuntoNivelEspecifico(int(row['cd_assunto_trf']),1))
+        df.set_value(i,'cd_assunto_nivel_2',recuperaAssuntoNivelEspecifico(int(row['cd_assunto_trf']),2))
+        df.set_value(i,'cd_assunto_nivel_3',recuperaAssuntoNivelEspecifico(int(row['cd_assunto_trf']),3))
+        df.set_value(i,'cd_assunto_nivel_4',recuperaAssuntoNivelEspecifico(int(row['cd_assunto_trf']),4))
+        df.set_value(i,'cd_assunto_nivel_5',recuperaAssuntoNivelEspecifico(int(row['cd_assunto_trf']),5))
+    end_time = time.time() - start_time
+    print('Tempo para montar a hierarquia de assuntos:' + str(timedelta(seconds=end_time)))   
+         
+
+# =============================================================================
+# Função que recupera os filhos de um assunto de nivel 3
+# =============================================================================
+    
+def recuperaFilhosDoNivel3(codigo):
+    filhos =  assuntos.query('cd_assunto_nivel_3==' + str(codigo))
+    codigosFilhos = []
+    for i, row in filhos.iterrows():
+        codigosFilhos.append(int(row['cd_assunto_nivel_4']))
+        codigosFilhos.append(int(row['cd_assunto_nivel_5']))
+    codigosFilhos =  [x for x in codigosFilhos if x != 0]
+    codigosFilhos = list(set(codigosFilhos))
+    return codigosFilhos
+
+
+# =============================================================================
+# Função que analisa todos plota graficos de barras para os 5 níveis
+# =============================================================================
 
 def analisaTodosOsNiveis (dfGeral, path, title):
     
@@ -177,7 +252,7 @@ def naive_bayes(training_corpus,training_classes,test_corpus, test_classes, clas
     
     clf_NB = MultinomialNB()
     clf_NB_grid = GridSearchCV(estimator=clf_NB, param_grid=param_grid,
-                                         scoring='f1_weighted',n_jobs=5,cv=5, verbose=4)
+                                         scoring='f1_weighted',n_jobs=1,cv=5, verbose=4)
     
     clf_NB_grid.fit(training_corpus, training_classes)
     
@@ -220,7 +295,7 @@ def svm(training_corpus,training_classes,test_corpus, test_classes, classNumber,
     }
     clf_SVM = SVC(random_state=0, class_weight='balanced')
     clf_SVM_grid = GridSearchCV(estimator=clf_SVM, param_grid=param_grid,
-                                         scoring='f1_weighted',cv=5, verbose=4,n_jobs=5)
+                                         scoring='precision',cv=5, verbose=4,n_jobs=1)
     clf_SVM_grid.fit(training_corpus, training_classes)
     
     clf_SVM = clf_SVM_grid.best_estimator_
@@ -262,13 +337,12 @@ def random_forest(training_corpus,training_classes,test_corpus, test_classes, cl
     param_grid = {
        'max_features':[0.3,0.7],     
        'n_estimators':[200,500],
-       'min_samples_leaf':[10,50],
        'max_depth': [50,100],
        'class_weight':['balanced','balanced_subsample']        
     }
     clf_RF = RandomForestClassifier(random_state=1986,bootstrap=False)
     clf_RF_grid = GridSearchCV(estimator=clf_RF, param_grid=param_grid,
-                                         scoring='f1_weighted',n_jobs=5,verbose=4,cv=5)
+                                         scoring='precision',n_jobs=1,verbose=4,cv=5)
     clf_RF_grid.fit(training_corpus, training_classes)
 
     clf_RF = clf_RF_grid.best_estimator_
@@ -311,12 +385,9 @@ def mlp(training_corpus,training_classes,test_corpus, test_classes, classNumber,
     classesCM = classes
     
     param_grid = {
-        'learning_rate_init':[0.01,0.001],
         'hidden_layer_sizes':[(5,5), (5)],
         'activation': ['identity', 'logistic', 'tanh', 'relu'],
-        'momentum':[0.5],
-        'solver':['lbfgs', 'sgd', 'adam'],
-        'learning_rate':['adaptive'],
+        'solver':['lbfgs', 'sgd', 'adam']
      }
     
     clf_MLP = MLPClassifier( batch_size='auto',
