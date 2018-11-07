@@ -222,23 +222,9 @@ DROP FUNCTION public.fn_pjekz_3069_executa();
 
 --##################################################################################################
 --##################################################################################################
--- PJE_2.3.0_151__DDL_CTPJE-8599_REPLACE_VIEW_VS_PTE_DOCUMENTO_INDEXAVEL
+-- PJE_2.3.0_151__DDL_CTPJE-8599_REPLACE_VIEW_VS_PTE_DOCUMENTO_INDEXAVEL (alterado!!!!)
 --##################################################################################################
 --##################################################################################################
-/*
- * Objetivo      : Replace da view vs_pte_documento_indexavel
- * Issue         : [CTPJE-8599]
- * SubSistema    : (X)1ºGrau (X)2ºGrau (X)3ºGrau
- * Descricao     : Replace da view vs_pte_documento_indexavel para listar apenas os documentos ativos e o nome das pessoas que assinaram separadas por virgula 
- *
- * Equipe        : CTPJE/SPTRI
- * Issue         : [CTPJE-8599]
- * Autor         : Guilherme Dantas Bispo
- * Email		 : guilherme.bispo@tst.jus.br
- * Data Criacao  : 11/10/2018
- * 
-*/
-
 CREATE OR REPLACE FUNCTION public.fn_ctpje_8599_executa()
 RETURNS void AS $BODY$
 BEGIN
@@ -298,8 +284,6 @@ BEGIN
 		     LEFT JOIN pje_pte.tb_pte_status_documento_indexado pte ON pte.id_processo_documento = doc.id_processo_documento
 		  WHERE doc.dt_juntada IS NOT NULL 
 		    AND doc.in_ativo = 'S'
-		  	AND ((select grau.vl_variavel from grau) = '3' or 
-				(doc.ds_instancia='3' OR doc.ds_instancia::text =(select grau.vl_variavel from grau)))
 		  	AND ptrf.cd_processo_status = 'D'::bpchar
 		    AND pa.in_assunto_principal = 'S' and ptrf.in_segredo_justica = 'N' and doc.in_documento_sigiloso = 'N'
 			AND doc.id_tipo_processo_documento = (SELECT id_tipo_processo_documento FROM pje.tb_tipo_processo_documento WHERE ds_tipo_processo_documento = 'Recurso Ordinário');
