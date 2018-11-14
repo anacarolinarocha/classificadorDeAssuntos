@@ -15,10 +15,13 @@ import pandas as pd
 import numpy as np
 import itertools
 import time
+import os
 from datetime import timedelta
 
 import seaborn as sns
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import ComplementNB
+from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
@@ -29,7 +32,7 @@ from sklearn.metrics import precision_score
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
-from sklearn.cross_validation import cross_val_score, cross_val_predict
+from sklearn.model_selection import cross_val_score, cross_val_predict
 
 from gensim import  matutils
 from gensim import corpora
@@ -51,7 +54,7 @@ stopwords = [normalize('NFKD', palavra).encode('ASCII','ignore').decode('ASCII')
 stemmer = nltk.stem.RSLPStemmer()
 
 
-avaliacaoFinal = pd.DataFrame(columns=['Model','Features','Macro Precisão', 'Macro Revocação', 'Macro F1-Measure','Micro Precisão', 'Micro Revocação', 'Micro F1-Measure'])
+avaliacaoFinal = pd.DataFrame(columns=['Experimento','Model','Features','Macro Precisão', 'Macro Revocação', 'Macro F1-Measure','Micro Precisão', 'Micro Revocação', 'Micro F1-Measure','Tempo'])
 
 modelos=[]
 
@@ -62,6 +65,28 @@ assuntosNivel2 = pd.Series(assuntos['cd_assunto_nivel_2'])
 assuntosNivel3 = pd.Series(assuntos['cd_assunto_nivel_3'])
 assuntosNivel4 = pd.Series(assuntos['cd_assunto_nivel_4'])
 assuntosNivel5 = pd.Series(assuntos['cd_assunto_nivel_5'])
+
+# =============================================================================
+# Função para preencher avaliação final
+# =============================================================================
+def preencheAvaliacaoFinal(nomeExperimento,nomePasta,nomeArquivoResultadosCompilados,featureType):
+    
+    i=0
+    for modelo in modelos:
+        avaliacaoFinal.loc[i]=[nomeExperimento,
+                            modelo.getNome(),
+                          featureType,
+                           modelo.getMacroPrecision(),
+                           modelo.getMacroRecall(),
+                           modelo.getMacroFscore(),
+                           modelo.getMicroPrecision(),
+                           modelo.getMicroRecall(),
+                           modelo.getMicroFscore(),
+                           modelo.getTempoProcessamento()]
+        i+=1
+        nomeArquivo = nomePasta+'/avaliacaoFinal_'+nomeExperimento +'.csv'
+        avaliacaoFinal.to_csv(nomeArquivo, sep=';')
+        avaliacaoFinal.to_csv(nomeArquivoResultadosCompilados, sep=';',mode='a', header=False)
 
 # =============================================================================
 # Função para recuperar o nível de um assunto
@@ -125,6 +150,20 @@ def recuperaFilhosDoNivel3(codigo):
     codigosFilhos =  [x for x in codigosFilhos if x != 0]
     codigosFilhos = list(set(codigosFilhos))
     return codigosFilhos
+
+
+def recuperaFilhosDoNivel1(codigo):
+    filhos =  assuntos.query('cd_assunto_nivel_1==' + str(codigo))
+    codigosFilhos = []
+    for i, row in filhos.iterrows():
+        codigosFilhos.append(int(row['cd_assunto_nivel_2']))
+        codigosFilhos.append(int(row['cd_assunto_nivel_3']))
+        codigosFilhos.append(int(row['cd_assunto_nivel_4']))
+        codigosFilhos.append(int(row['cd_assunto_nivel_5']))
+    codigosFilhos =  [x for x in codigosFilhos if x != 0]
+    codigosFilhos = list(set(codigosFilhos))
+    return codigosFilhos
+
 
 
 # =============================================================================
@@ -269,10 +308,11 @@ def cria_grafico_barra(data, title, ylabel, xlabel, fontSize, figSize_x, figSize
 # =============================================================================
 # NAIVE BAYES (SEM GRID)
 # =============================================================================
-def naive_bayes(x, y, classes,featureType):
+
+def naive_bayes(x, y, classes,featureType,nomePasta):
     start_time = time.time()
-    clf_NB = MultinomialNB()
-    predicted_NB = cross_val_predict(clf_NB, x, y, cv=5, n_jobs=7)
+    clf_NB = ComplementNB()
+    predicted_NB = cross_val_predict(clf_NB, x, y, cv=5, n_jobs=1)
     
     macro_precision,macro_recall,macro_fscore,macro_support=score(y,predicted_NB,average='macro')
     micro_precision,micro_recall,micro_fscore,micro_support=score(y,predicted_NB,average='weighted')
@@ -281,29 +321,31 @@ def naive_bayes(x, y, classes,featureType):
     matrixHeaderString = 'Naive Bayes - ' +featureType + '\nMacro/Micro Precisão: {0:.3f}/{0:.3f}'.format(macro_precision,micro_precision)
     
     plot_simple_confusion_matrix(confusion_matrix_NB, classes, title=matrixHeaderString)
-    figureFile = '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/simple_confusion_matrix_NB_'+ str(featureType) +'.png'
+    figureFile = nomePasta + '/imagens/simple_confusion_matrix_NB_'+ str(featureType) +'.png'
     plt.savefig(figureFile) 
     
     plot_confusion_matrix(confusion_matrix_NB, classes, title=matrixHeaderString)
-    figureFile = '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/confusion_matrix_NB_'+ str(featureType) +'.png'
+    figureFile =nomePasta + '/imagens/confusion_matrix_NB_'+ str(featureType) +'.png'
     plt.savefig(figureFile) 
-    
-    modeloNB  = Modelo('Multinomial Naive Bayes', None, clf_NB, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
-    global modelos
-    modelos.append(modeloNB)
     
     end_time = time.time() - start_time
     print('Tempo da execução do Naive Bayes:' + str(timedelta(seconds=end_time)))
+    
+    global modelos
+    modeloNB  = Modelo('Multinomial Naive Bayes', featureType,str(timedelta(seconds=end_time)), None, clf_NB, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
+    modelos.append(modeloNB)
+    
+    
     
     
 # =============================================================================
 # SVM (SEM GRID)
 # =============================================================================
-def svm(x, y, classes,featureType):
+def svm(x, y, classes,featureType, nomePasta):
     start_time = time.time()
     
     clf_SVM = SVC(random_state=0, class_weight='balanced')
-    predicted_SVM = cross_val_predict(clf_SVM, x, y, cv=5, n_jobs=5)
+    predicted_SVM = cross_val_predict(clf_SVM, x, y, cv=5, n_jobs=8)
     
     macro_precision,macro_recall,macro_fscore,macro_support=score(y,predicted_SVM,average='macro')
     micro_precision,micro_recall,micro_fscore,micro_support=score(y,predicted_SVM,average='weighted')
@@ -312,28 +354,29 @@ def svm(x, y, classes,featureType):
     matrixHeaderString = 'SVM  - ' +featureType + '\nMacro/Micro Precisão: {0:.3f}/{0:.3f}'.format(macro_precision,micro_precision)
     
     plot_simple_confusion_matrix(confusion_matrix_SVM, classes, title=matrixHeaderString)
-    figureFile = '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/simple_confusion_matrix_SVM_'+ str(featureType) +'.png'
+    figureFile = nomePasta + '/imagens/simple_confusion_matrix_SVM_'+ str(featureType) +'.png'
     plt.savefig(figureFile) 
     
     
     plot_confusion_matrix(confusion_matrix_SVM, classes, title=matrixHeaderString)
-    figureFile = '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/confusion_matrix_SVM_'+ featureType+'.png'
+    figureFile = nomePasta + '/imagens/confusion_matrix_SVM_'+ featureType+'.png'
     plt.savefig(figureFile) 
-    
-    modeloSVM  = Modelo('SVM', None, clf_SVM, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
-    
-    global  modelos
-    modelos.append(modeloSVM)
     
     end_time = time.time() - start_time
     print('Tempo da execução do SVM:' + str(timedelta(seconds=end_time)))
     
+    modeloSVM  = Modelo('SVM', featureType,str(timedelta(seconds=end_time)), None, clf_SVM, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
+    
+    global  modelos
+    modelos.append(modeloSVM)
+    
+    
 # =============================================================================
 # Random Forest (SEM GRID)
 # =============================================================================
-def random_forest(x, y, classes,featureType):
+def random_forest(x, y, classes,featureType, nomePasta):
     start_time = time.time()
-    clf_RF = RandomForestClassifier(random_state=0)
+    clf_RF = RandomForestClassifier()
     predicted_RF =  cross_val_predict(clf_RF, x, y, cv=5, n_jobs=5)
     
     macro_precision,macro_recall,macro_fscore,macro_support=score(y,predicted_RF,average='macro')
@@ -343,24 +386,25 @@ def random_forest(x, y, classes,featureType):
     matrixHeaderString = 'Random Forest - ' +featureType + '\nMacro/Micro Precisão: {0:.3f}/{0:.3f}'.format(macro_precision,micro_precision)
     
     plot_simple_confusion_matrix(confusion_matrix_RF, classes, title=matrixHeaderString)
-    figureFile = '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/simple_confusion_matrix_RF_'+ str(featureType) +'.png'
+    figureFile = nomePasta + '/imagens/simple_confusion_matrix_RF_'+ str(featureType) +'.png'
     plt.savefig(figureFile) 
     
     plot_confusion_matrix(confusion_matrix_RF, classes, title=matrixHeaderString)
-    figureFile = '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/confusion_matrix_RF_'+ featureType+'.png'
+    figureFile = nomePasta + '/imagens/confusion_matrix_RF_'+ featureType+'.png'
     plt.savefig(figureFile) 
     
-    modeloRF  = Modelo('Random Forest', None, clf_RF, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
+    end_time = time.time() - start_time
+    print('Tempo da execução do Random Forest:' + str(timedelta(seconds=end_time)))
+    
+    modeloRF  = Modelo('Random Forest', featureType,str(timedelta(seconds=end_time)), None, clf_RF, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
     
     global modelos
     modelos.append(modeloRF)
-    end_time = time.time() - start_time
-    print('Tempo da execução do Random Forest:' + str(timedelta(seconds=end_time)))
 # =============================================================================
 # Multilayer Perceptron (SEM GRID)
 # =============================================================================
 
-def mlp(x, y, classes,featureType):
+def mlp(x, y, classes,featureType, nomePasta):
     start_time = time.time()
     clf_MLP = MLPClassifier()
     predicted_MLP = cross_val_predict(clf_MLP, x, y, cv=5, n_jobs=7)
@@ -373,20 +417,20 @@ def mlp(x, y, classes,featureType):
     
     
     plot_simple_confusion_matrix(confusion_matrix_MLP, classes, title=matrixHeaderString)
-    figureFile = '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/simple_confusion_matrix_MLP_'+ str(featureType) +'.png'
+    figureFile = nomePasta + '/imagens/simple_confusion_matrix_MLP_'+ str(featureType) +'.png'
     plt.savefig(figureFile) 
     
     
     plot_confusion_matrix(confusion_matrix_MLP, classes, title=matrixHeaderString)
-    figureFile = '/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/confusion_matrix_MLP_'+ featureType+'.png'
+    figureFile = nomePasta + '/imagens/confusion_matrix_MLP_'+ featureType+'.png'
     plt.savefig(figureFile) 
     
-    modeloMLP  = Modelo('Multilayer Perceptron', None, clf_MLP, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
+    end_time = time.time() - start_time
+    print('Tempo da execução do MLP:' + str(timedelta(seconds=end_time)))
+    modeloMLP  = Modelo('Multilayer Perceptron', featureType,str(timedelta(seconds=end_time)), None, clf_MLP, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
     
     global  modelos
     modelos.append(modeloMLP)
-    end_time = time.time() - start_time
-    print('Tempo da execução do MLP:' + str(timedelta(seconds=end_time)))
 # =============================================================================
 # COM GRID
 # =============================================================================
@@ -428,7 +472,7 @@ def naive_bayes_GRID(training_corpus,training_classes,test_corpus, test_classes,
     macro_precision,macro_recall,macro_fscore,macro_support=score(test_classes,predicted_NB,average='macro')
     micro_precision,micro_recall,micro_fscore,micro_support=score(test_classes,predicted_NB,average='weighted')
 #    modeloNB  = Modelo('Multinomial Naive Bayes', clf_NB_grid.best_params_, clf_NB_grid.best_estimator_, clf_NB_grid.cv_results_, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
-    modeloNB  = Modelo('Multinomial Naive Bayes', None, clf_NB, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
+    modeloNB  = Modelo('Multinomial Naive Bayes', featureType, None, clf_NB, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
     
     global avaliacaoFinal, modelos
     modelos.append(modeloNB)
@@ -475,7 +519,7 @@ def svm_GRID(training_corpus,training_classes,test_corpus, test_classes, classNu
     
     macro_precision,macro_recall,macro_fscore,macro_support=score(test_classes,predicted_SVM,average='macro')
     micro_precision,micro_recall,micro_fscore,micro_support=score(test_classes,predicted_SVM,average='weighted')
-    modeloSVM  = Modelo('SVM', None, clf_SVM, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
+    modeloSVM  = Modelo('SVM', featureType, None, clf_SVM, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
     
     global avaliacaoFinal, modelos
     modelos.append(modeloSVM)
@@ -522,7 +566,7 @@ def random_forest_GRID(training_corpus,training_classes,test_corpus, test_classe
     
     macro_precision,macro_recall,macro_fscore,macro_support=score(test_classes,predicted_RF,average='macro')
     micro_precision,micro_recall,micro_fscore,micro_support=score(test_classes,predicted_RF,average='weighted')
-    modeloRF  = Modelo('Random Forest', None, clf_RF, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
+    modeloRF  = Modelo('Random Forest', featureType, None, clf_RF, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
     
     global avaliacaoFinal, modelos
     modelos.append(modeloRF)
@@ -573,7 +617,7 @@ def mlp_GRID(training_corpus,training_classes,test_corpus, test_classes, classNu
     
     macro_precision,macro_recall,macro_fscore,macro_support=score(test_classes,predicted_MLP,average='macro')
     micro_precision,micro_recall,micro_fscore,micro_support=score(test_classes,predicted_MLP,average='weighted')
-    modeloMLP  = Modelo('Multilayer Perceptron', None, clf_MLP, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
+    modeloMLP  = Modelo('Multilayer Perceptron', featureType, None, clf_MLP, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
     
     global avaliacaoFinal, modelos
     modelos.append(modeloMLP)

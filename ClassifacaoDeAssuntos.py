@@ -32,22 +32,39 @@ from funcoes import *
 # =============================================================================
 # Dinive variaveis globais
 # =============================================================================
+nomeDataSet = 'TRT15_2G_JT_2017'
+featureType = 'LSI_200'
+nomeExperimento = nomeDataSet+'_'+featureType+'_CorpusCompleto_CV5'
+numeroExperimento = '3'
+nomePastaRestultados='./Resultados'
+nomeArqutivoResultadosCompilados=nomePastaRestultados+'/resultadosFinaisCompilados.csv'
+nomePasta = nomePastaRestultados + '/Experimento ' + numeroExperimento + ' - ' + nomeExperimento
 
-
+import os
+if not os.path.exists(nomePasta):
+    os.makedirs(nomePasta)
+    os.makedirs(nomePasta+'/imagens')
+    
 quantidadeMinimaDocumentos = 50;
 solr = SolrClient('http://localhost:8983/solr')
 
+
+# =============================================================================
+# Marca os elementos que serão usados para teste no Solr
+# =============================================================================
+def marcarDocumentosSolr(field,data, flag):
+    documentos = []
+    for ids in data:
+        doc = {'id': ids, field:{'set': flag}}
+        documentos.append(doc)
+    solr.index_json('documentos_2g',json.dumps(documentos))
+    solr.commit(openSearcher=True, collection='documentos_2g')
 
 ##############################################################################    
 ##############################################################################
 # ANALISA OS DADOS
 ##############################################################################
 ##############################################################################
-
-
-
-print(recuperaNivelAssunto(55327))
-print(recuperaAssuntoNivelEspecifico(2554,4))
 
 # =============================================================================
 # Retira dos dados aqueles que tem menos de 50 exemplares no nivel 3.
@@ -56,13 +73,13 @@ print(recuperaAssuntoNivelEspecifico(2554,4))
 # para popular cada fold.
 # =============================================================================
 query = 'tx_conteudo_documento:[* TO *]'
-solrDataAnalise = solr.query('documentos',{
+solrDataAnalise = solr.query('documentos_2g',{
 'q':query,'fl':'id_processo_documento,cd_assunto_trf', 'rows':'300000'
 })
 dfGeral = pd.DataFrame(solrDataAnalise.docs)
 
 recuperaHierarquiaAssuntos(dfGeral)
-
+print("--------------------------- passou aqui 1")
 
 
 dfGeral_CountNivel3 = dfGeral.groupby('cd_assunto_nivel_3')[['id_processo_documento']].count()
@@ -82,49 +99,60 @@ for filho in filhosAbaixoQuantidadeMinima:
 codigosAbaixoQuantidadeMinima = ' '.join(map(str, codigosAbaixoQuantidadeMinima)) 
 codigosAbaixoQuantidadeMinima = codigosAbaixoQuantidadeMinima.replace('.0', '')
 #um total de 92208 caiu para 91211 quando tiramos os com menos de 50.
-        
+print("--------------------------- passou aqui 2")        
 # =============================================================================
 # Recupera o conjunto de dados, já excluindo:
 # 1) os que tem menos que a quantidade minima
 # =============================================================================
 query = query + ' AND NOT cd_assunto_trf:(' + codigosAbaixoQuantidadeMinima + ')'
-solrDataAnalise = solr.query('documentos',{
+solrDataAnalise = solr.query('documentos_2g',{
 'q':query,'fl':'id,id_processo_documento,cd_assunto_trf', 'rows':'300000'
 })
 dfGeral = pd.DataFrame(solrDataAnalise.docs)  
 recuperaHierarquiaAssuntos(dfGeral)
     
-analisaTodosOsNiveis(dfGeral, './imagens/TRT15_2GRAU_Distribuicao_De_Processos_Por_Nivel_Assunto_ArvoreCompleta_2017.png', 'Distribuição de Processo Por Nível de Assunto - Árvore Completa')
-
+analisaTodosOsNiveis(dfGeral, nomePasta+'/imagens/TRT15_2GRAU_Distribuicao_De_Processos_Por_Nivel_Assunto_ArvoreCompleta_2017.png', 'Distribuição de Processo Por Nível de Assunto - Árvore Completa')
+print("--------------------------- passou aqui 3")
 # =============================================================================
 # Fazendo uma análise específica da subarvore do DIREITO DO TRABALHO (Código 864)
 # =============================================================================
+
 dfGeralJT = dfGeral.query('cd_assunto_nivel_1==' + str(864))  
-recuperaHierarquiaAssuntos(dfGeralJT)
-    
-analisaTodosOsNiveis(dfGeralJT, './imagens/TRT15_2GRAU_Distribuicao_De_Processos_Por_Nivel_Assunto_DiretoDoTrabalho_2017.png', 'Distribuição de Processo Por Nível de Assunto - Árvore de Direito do Trabalho')
+#recuperaHierarquiaAssuntos(dfGeralJT)
+codigosJT =recuperaFilhosDoNivel1(864)
+codigosJT = ' '.join(map(str, codigosJT)) 
+
+analisaTodosOsNiveis(dfGeralJT, nomePasta+'/imagens/TRT15_2GRAU_Distribuicao_De_Processos_Por_Nivel_Assunto_DiretoDoTrabalho_2017.png', 'Distribuição de Processo Por Nível de Assunto - Árvore de Direito do Trabalho')
+print("--------------------------- passou aqui 4")
+# =============================================================================
+# Marca os elementos que são ja JT (como usa só o assunto filho, nao da pra saber direto la)
+# =============================================================================
 
 
-#USANDO FACETS.....
-#solrDataAnalise = solr.query('classificacaoDeDocumentos_hierarquiaCompleta',{
-#'q':'tx_conteudo_documento:[* TO *]',
-#'rows':'10',
-#'facet':True,
-#'facet.field':'cd_assunto_nivel_1',
-#'facet.mincount':'10'
-#})
-#columns = ['cd_assunto_nivel_1','count']
-#facets = pd.DataFrame(columns=columns)
-#facets['cd_assunto_nivel_2']= solrDataAnalise.get_facet_keys_as_list('cd_assunto_nivel_1')
-#facets['count']= solrDataAnalise.get_facet_values_as_list('cd_assunto_nivel_1')
-#dfFacet = pd.DataFrame(solrDataAnalise.facet_pivot)    
+
+queryJT = query + ' AND cd_assunto_trf:(' + codigosJT + ')'
+solrDataAnalise = solr.query('documentos_2g',{
+'q':queryJT,'fl':'id,id_processo_documento,cd_assunto_trf', 'rows':'300000'
+})
+dfJT = pd.DataFrame(solrDataAnalise.docs)  
+marcarDocumentosSolr('isJT',dfJT['id'], 'true')
+print("--------------------------- passou aqui 5")
 
 
+queryNOT_JT = query + ' AND NOT cd_assunto_trf:(' + codigosJT + ')'
+solrDataAnalise = solr.query('documentos_2g',{
+'q':queryNOT_JT,'fl':'id,id_processo_documento,cd_assunto_trf', 'rows':'300000'
+})
+df_NOTJT = pd.DataFrame(solrDataAnalise.docs)  
+marcarDocumentosSolr('isJT',df_NOTJT['id'], 'false')
+query = query + ' AND isJT:true'
+
+print("--------------------------- passou aqui 6")
 # =============================================================================
 # Criando conjuntos de treinamento e teste estratificados
 # =============================================================================
 #Codigo a ser rodado na primeira vez. depois que o Solr já está 'marcado', nao se faz split denovo.
-#solrDataAnalise = solr.query('documentos',{
+#solrDataAnalise = solr.query('documentos_2g',{
 #'q':query,'fl':'id,id_processo_documento,cd_assunto_trf', 'rows':'300000'
 #})
 #dfFinal = pd.DataFrame(solrDataAnalise.docs)    
@@ -138,45 +166,41 @@ analisaTodosOsNiveis(dfGeralJT, './imagens/TRT15_2GRAU_Distribuicao_De_Processos
 # =============================================================================
 # Marca os elementos que serão usados para teste no Solr
 # =============================================================================
-#def marcarDocumentosSolr(data, flag):
-#    documentos = []
-#    for ids in data:
-#        doc = {'id': ids, 'isTeste':{'set': flag}}
-#        documentos.append(doc)
-#    solr.index_json('documentos',json.dumps(documentos))
-#    solr.commit(openSearcher=True, collection='documentos')
+
+#marcarDocumentosSolr('isTeste',df_idProcessos_treinamento['id'], 'false')
+#marcarDocumentosSolr('isTeste',df_idProcessos_teste['id'], 'true')
+
+
+# =============================================================================
+# Se o Solr ja estiver marcado, pode-se carregar treinamento e teste com os comandos abaixo
+# =============================================================================
 #
-#marcarDocumentosSolr(df_idProcessos_treinamento['id'], 'false')
-#marcarDocumentosSolr(df_idProcessos_teste['id'], 'true')
-
-
-
-queryTreinamento = query + ' AND NOT isTeste:true'
-queryTeste  = query + ' AND isTeste:true'
-
-solrDataAnalise = solr.query('documentos',{
-'q':queryTreinamento,'fl':'id, id_processo_documento', 'rows':'300000'
-})
-df_idProcessos_treinamento = pd.DataFrame(solrDataAnalise.docs)
-
-solrDataAnalise = solr.query('documentos',{
-'q':queryTeste,'fl':'id, id_processo_documento', 'rows':'300000'
-})
-df_idProcessos_teste = pd.DataFrame(solrDataAnalise.docs)    
-
-solrDataAnalise = solr.query('documentos',{
-'q':queryTreinamento,'fl':'cd_assunto_trf', 'rows':'300000'
-})
-df_codigoAssunto_treinamento = pd.DataFrame(solrDataAnalise.docs)
-recuperaHierarquiaAssuntos(df_codigoAssunto_treinamento)
-df_codigoAssunto_treinamento=df_codigoAssunto_treinamento['cd_assunto_nivel_3']
-
-solrDataAnalise = solr.query('documentos',{
-'q':queryTeste,'fl':'cd_assunto_trf', 'rows':'300000'
-})
-df_codigoAssunto_teste = pd.DataFrame(solrDataAnalise.docs)    
-recuperaHierarquiaAssuntos(df_codigoAssunto_teste)
-df_codigoAssunto_teste=df_codigoAssunto_teste['cd_assunto_nivel_3']
+#queryTreinamento = query + ' AND NOT isTeste:true'
+#queryTeste  = query + ' AND isTeste:true'
+#
+#solrDataAnalise = solr.query('documentos_2g',{
+#'q':queryTreinamento,'fl':'id, id_processo_documento', 'rows':'300000'
+#})
+#df_idProcessos_treinamento = pd.DataFrame(solrDataAnalise.docs)
+#
+#solrDataAnalise = solr.query('documentos_2g',{
+#'q':queryTeste,'fl':'id, id_processo_documento', 'rows':'300000'
+#})
+#df_idProcessos_teste = pd.DataFrame(solrDataAnalise.docs)    
+#
+#solrDataAnalise = solr.query('documentos_2g',{
+#'q':queryTreinamento,'fl':'cd_assunto_trf', 'rows':'300000'
+#})
+#df_codigoAssunto_treinamento = pd.DataFrame(solrDataAnalise.docs)
+#recuperaHierarquiaAssuntos(df_codigoAssunto_treinamento)
+#df_codigoAssunto_treinamento=df_codigoAssunto_treinamento['cd_assunto_nivel_3']
+#
+#solrDataAnalise = solr.query('documentos_2g',{
+#'q':queryTeste,'fl':'cd_assunto_trf', 'rows':'300000'
+#})
+#df_codigoAssunto_teste = pd.DataFrame(solrDataAnalise.docs)    
+#recuperaHierarquiaAssuntos(df_codigoAssunto_teste)
+#df_codigoAssunto_teste=df_codigoAssunto_teste['cd_assunto_nivel_3']
 
 
 ################################################################################################################################
@@ -198,7 +222,7 @@ df_codigoAssunto_teste=df_codigoAssunto_teste['cd_assunto_nivel_3']
 #listaProcessada = []
 #if os.path.exists('./Data/corpus/listaProcessadaFinal_Treinamento.csv'):
 #  os.remove('./Data/corpus/listaProcessadaFinal_Treinamento.csv')
-#for resCursor in solr.cursor_query('documentos',{'q':queryTreinamento,'rows':'100','fl':'tx_conteudo_documento','sort':'id asc'}):  
+#for resCursor in solr.cursor_query('documentos_2g',{'q':queryTreinamento,'rows':'100','fl':'tx_conteudo_documento','sort':'id asc'}):  
 #    listaProcessada = Parallel(n_jobs = 7)(delayed(processa_texto)(documento.get('tx_conteudo_documento')) for documento in resCursor.docs)
 #    dicionarioParcial = corpora.Dictionary(listaProcessada)
 #    dicionarioFinal.merge_with(dicionarioParcial)
@@ -215,7 +239,7 @@ df_codigoAssunto_teste=df_codigoAssunto_teste['cd_assunto_nivel_3']
 #if os.path.exists('./Data/corpus/listaProcessadaFinal_Teste.csv'):
 #  os.remove('./Data/corpus/listaProcessadaFinal_Teste.csv')
 #
-#for resCursor in solr.cursor_query('documentos',{'q':queryTeste,'rows':'1000','fl':'tx_conteudo_documento','sort':'id asc'}):  
+#for resCursor in solr.cursor_query('documentos_2g',{'q':queryTeste,'rows':'1000','fl':'tx_conteudo_documento','sort':'id asc'}):  
 #    listaProcessada = Parallel(n_jobs = 7)(delayed(processa_texto)(documento.get('tx_conteudo_documento')) for documento in resCursor.docs)
 #    dicionarioParcial = corpora.Dictionary(listaProcessada)
 #    dicionarioFinal.merge_with(dicionarioParcial)
@@ -291,7 +315,7 @@ df_codigoAssunto_teste=df_codigoAssunto_teste['cd_assunto_nivel_3']
 ## Busca o target do conjunto de treinamento: assunto de nível 2
 ##------------------------------------------------------------------------------
 # 
-#assuntos_Treinamento = solr.query('documentos',{'q':queryTreinamento,'rows':'1000000','fl':'cd_assunto_nivel_2','sort':'id asc'})
+#assuntos_Treinamento = solr.query('documentos_2g',{'q':queryTreinamento,'rows':'1000000','fl':'cd_assunto_nivel_2','sort':'id asc'})
 #assuntos_Treinamento = pd.DataFrame(assuntos_Treinamento.docs)    
 #assuntos_Treinamento.shape
 #
@@ -352,7 +376,7 @@ df_codigoAssunto_teste=df_codigoAssunto_teste['cd_assunto_nivel_3']
 ##------------------------------------------------------------------------------
 ## Busca o target do conjunto de teste: assunto de nível 2
 ##------------------------------------------------------------------------------
-#assuntos_Teste = solr.query('documentos',{'q':queryTeste,'rows':'1000000','fl':'cd_assunto_nivel_2','sort':'id asc'})
+#assuntos_Teste = solr.query('documentos_2g',{'q':queryTeste,'rows':'1000000','fl':'cd_assunto_nivel_2','sort':'id asc'})
 #assuntos_Teste = pd.DataFrame(assuntos_Teste.docs)    
 #assuntos_Teste.shape
 #
@@ -367,26 +391,27 @@ df_codigoAssunto_teste=df_codigoAssunto_teste['cd_assunto_nivel_3']
 # =============================================================================
 # CORPUS INTEIRO
 # =============================================================================
+dicionarioFinal = corpora.Dictionary('')
 start_time = time.time()
 listaProcessada = []
-if os.path.exists('./Data/corpus/listaProcessadaFinal_CorpusCompleto2017.csv'):
-  os.remove('./Data/corpus/listaProcessadaFinal_CorpusCompleto2017.csv')
-for resCursor in solr.cursor_query('documentos',{'q':query,'rows':'100','fl':'tx_conteudo_documento','sort':'id asc'}):  
-    listaProcessada = Parallel(n_jobs = 8)(delayed(processa_texto)(documento.get('tx_conteudo_documento')) for documento in resCursor.docs)
+if os.path.exists('./Data/corpus/listaProcessadaFinal_CorpusCompleto_JT_2017.csv'):
+  os.remove('./Data/corpus/listaProcessadaFinal_CorpusCompleto_JT_2017.csv')
+for resCursor in solr.cursor_query('documentos_2g',{'q':query,'rows':'100','fl':'tx_conteudo_documento','sort':'id asc'}):  
+    listaProcessada = Parallel(n_jobs = 7)(delayed(processa_texto)(documento.get('tx_conteudo_documento')) for documento in resCursor.docs)
     dicionarioParcial = corpora.Dictionary(listaProcessada)
     dicionarioFinal.merge_with(dicionarioParcial)
-    with open("./Data/corpus/listaProcessadaFinal_CorpusCompleto2017.csv", "a") as fp:
+    with open("./Data/corpus/listaProcessadaFinal_CorpusCompleto_JT_2017.csv", "a") as fp:
         wr = csv.writer(fp, dialect='excel')
         for row in listaProcessada:
             wr.writerow(row)           
 end_time = time.time() - start_time
 print('Tempo de processamento do texto:' + str(timedelta(seconds=end_time)))
 #2029 segundos -> 33 minutos
+print("--------------------------- passou aqui 7")
 
-
-if os.path.exists('./Data/corpus/dicionarioFinal_CorpusCompleto2017.dict'):
-  os.remove('./Data/corpus/dicionarioFinal_CorpusCompleto2017.dict')
-dicionarioFinal.save('./Data/corpus/dicionarioFinal_CorpusCompleto2017.dict')    
+if os.path.exists('./Data/corpus/dicionarioFinal_CorpusCompleto_JT_2017.dict'):
+  os.remove('./Data/corpus/dicionarioFinal_CorpusCompleto_JT_2017.dict')
+dicionarioFinal.save('./Data/corpus/dicionarioFinal_CorpusCompleto_JT_2017.dict')    
 
 
 
@@ -396,8 +421,9 @@ dicionarioFinal.save('./Data/corpus/dicionarioFinal_CorpusCompleto2017.dict')
 
 
 #carrega dicionaria
-#dicionarioFinal=corpora.Dictionary.load('./Data/corpus/dicionarioFinal.dict', mmap='r')
+#dicionarioFinal=corpora.Dictionary.load('./Data/corpus/dicionarioFinal_CorpusCompleto_JT_2017.dict', mmap='r')
 tamanho_dicionario = len(dicionarioFinal.keys())
+tamanho_dicionario
 
 #------------------------------------------------------------------------------
 # Cria o corpus de Bag of Words
@@ -405,56 +431,60 @@ tamanho_dicionario = len(dicionarioFinal.keys())
 start_time = time.time()        
 class MyCorpus_Treinamento_Doc2Bow(object):
     def __iter__(self):
-        for line in open('./Data/corpus/listaProcessadaFinal_CorpusCompleto2017.csv'):
+        for line in open('./Data/corpus/listaProcessadaFinal_CorpusCompleto_JT_2017.csv'):
             yield dicionarioFinal.doc2bow(line.split(','))
-corpora.MmCorpus.serialize('./Data/corpus/corpus_BOW.mm', MyCorpus_Treinamento_Doc2Bow())
+corpora.MmCorpus.serialize('./Data/corpus/CorpusCompleto_BOW_'+nomeDataSet+'.mm', MyCorpus_Treinamento_Doc2Bow())
 end_time = time.time() - start_time
 print('Tempo de criação do matriz BOW:' + str(timedelta(seconds=end_time)))
 
 
-corpus_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('./Data/corpus/corpus_BOW.mm'), tamanho_dicionario).transpose()
+corpus_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('./Data/corpus/CorpusCompleto_BOW_'+nomeDataSet+'.mm'), tamanho_dicionario).transpose()
 corpus_bow_sparse.shape
 
 #------------------------------------------------------------------------------
 # Cria o corpus TF-IDF
 #------------------------------------------------------------------------------
 start_time = time.time()
-modeloTfidf = TfidfModel(corpora.MmCorpus('./Data/corpus/corpus_BOW.mm') , id2word=dicionarioFinal, normalize=True)
-modeloTfidf.save('./Data/corpus/corpus_TFIDF.tfidf_model')
-MmCorpus.serialize('./Data/corpus/corpus_TFIDF.mm', modeloTfidf[corpora.MmCorpus('./Data/corpus/corpus_BOW.mm')], progress_cnt=10000)
+modeloTfidf = TfidfModel(corpora.MmCorpus('./Data/corpus/CorpusCompleto_BOW_'+nomeDataSet+'.mm') , id2word=dicionarioFinal, normalize=True)
+modeloTfidf.save('./Data/corpus/CorpusCompleto_TDIDF_'+nomeDataSet+'.tfidf_model')
+MmCorpus.serialize('./Data/corpus/CorpusCompleto_TDIDF_'+nomeDataSet+'.mm', modeloTfidf[corpora.MmCorpus('./Data/corpus/CorpusCompleto_BOW_'+nomeDataSet+'.mm')], progress_cnt=10000)
 del(modeloTfidf)
 end_time = time.time() - start_time
 print('Tempo de criação do matriz TD-IDF:' + str(timedelta(seconds=end_time)))
 
 
-corpus_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('./Data/corpus/corpus_TFIDF.mm'), tamanho_dicionario).transpose()
+corpus_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('./Data/corpus/CorpusCompleto_TDIDF_'+nomeDataSet+'.mm'), tamanho_dicionario).transpose()
 corpus_tfidf_sparse.shape
 
 #------------------------------------------------------------------------------
 # Cria o corpus LSI
 #------------------------------------------------------------------------------
-num_topics=300
+num_topics=200
 start_time = time.time()
-modeloLSITreinamento = LsiModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_TFIDF.mm'), id2word=dicionarioFinal, num_topics=num_topics)
-modeloLSITreinamento.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_LSI.lsi_model')
-MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_LSI.mm', modeloLSITreinamento[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_TFIDF.mm')], progress_cnt=10000)
-del(modeloLSITreinamento)
-print(time.time() - start_time)
+modeloLSITreinamento = LsiModel(corpora.MmCorpus('./Data/corpus/CorpusCompleto_TDIDF_'+nomeDataSet+'.mm'), id2word=dicionarioFinal, num_topics=num_topics)
+modeloLSITreinamento.save('./Data/corpus/corpus_LSI_'+str(num_topics)+'_'+nomeDataSet+'.mm')
+MmCorpus.serialize('./Data/corpus/corpus_LSI_'+str(num_topics)+'_'+nomeDataSet+'.mm', modeloLSITreinamento[corpora.MmCorpus('./Data/corpus/CorpusCompleto_TDIDF_'+nomeDataSet+'.mm')], progress_cnt=10000)
+end_time = time.time() - start_time
+print('Tempo de processamento do LSI:' + str(timedelta(seconds=end_time)))
+#Tempo de processamento do LSI:0:13:00.940066
+corpus_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('./Data/corpus/corpus_LSI_'+str(num_topics)+'_'+nomeDataSet+'.mm'), num_topics).transpose()
+corpus_lsi_sparse.shape
 
-corpus_treinamento_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_LSI.mm'), num_topics).transpose()
-corpus_treinamento_lsi_sparse.shape
 
+corpus_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('./Data/corpus/corpus_LSI_'+str(200)+'_'+nomeDataSet+'.mm'), 200).transpose()
+corpus_lsi_sparse.shape
 
-################################################################################################################################
-# INDUÇÃO DE MODELOS 
-################################################################################################################################
-
-assuntosCorpusInteiro = solr.query('documentos',{'q':query,'rows':'1000000','fl':'cd_assunto_trf','sort':'id asc'})
+# =============================================================================
+# Recupera todos os assuntos
+# =============================================================================
+assuntosCorpusInteiro = solr.query('documentos_2g',{'q':query,'rows':'1000000','fl':'cd_assunto_trf','sort':'id asc'})
 assuntosCorpusInteiro = pd.DataFrame(assuntosCorpusInteiro.docs)    
 assuntosCorpusInteiro.shape
 recuperaHierarquiaAssuntos(assuntosCorpusInteiro)
 
-
+# =============================================================================
+# Recupera as classes de acordo com o nível 3
+# =============================================================================
 counts = pd.DataFrame(assuntosCorpusInteiro['cd_assunto_trf'].astype('category').values.describe())
 classes = pd.DataFrame(assuntosCorpusInteiro['cd_assunto_trf'].astype('category').values.describe())
 classes.reset_index(inplace=True)
@@ -472,96 +502,40 @@ classes = classes['categories']
 classes = pd.DataFrame({'cd_assunto_nivel_3':classes})
 classes = classes.cd_assunto_nivel_3.tolist()
 classes = [int(i) for i in classes]
-
 type(classes)
-#//TODO: fazer validacao cruzada
-#------------------------------------------------------------------------------
-# Modelos
-#------------------------------------------------------------------------------
 
+################################################################################################################################
+# INDUÇÃO DE MODELOS 
+################################################################################################################################
 from funcoes import *
-    
-naive_bayes(corpus_tfidf_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'TFIDF')
-mlp(corpus_tfidf_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'TFIDF')
-svm(corpus_tfidf_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'TFIDF')
-random_forest(corpus_tfidf_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'TFIDF')
+#------------------------------------------------------------------------------
+# Modelos TD-IDF
+#------------------------------------------------------------------------------
 
 
-def preencheAvaliacaoFinal(nomeExperimento):
-    i=0
-    for modelo in modelos:
-        avaliacaoFinal.loc[i]=[modelo.getNome(),
-                           'TF-IDF',
-                           modelo.getMacroPrecision(),
-                           modelo.getMacroRecall(),
-                           modelo.getMacroFscore(),
-                           modelo.getMicroPrecision(),
-                           modelo.getMicroRecall(),
-                           modelo.getMicroFscore()]
-        i+=1
-        nomeArquivo = './Resultados/avaliacaoFinal' + nomeExperimento +'.csv'
-        avaliacaoFinal.to_csv(nomeArquivo, sep=';')
+#
+#naive_bayes(corpus_tfidf_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'TFIDF')
+#mlp(corpus_tfidf_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'TFIDF')
+#svm(corpus_tfidf_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'TFIDF')
+#random_forest(corpus_tfidf_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'TFIDF')
 
-preencheAvaliacaoFinal('TRT15_2017_TFIDF_CorpusCompleto_CV5')
+#------------------------------------------------------------------------------
+# Modelos LSI
+#------------------------------------------------------------------------------
+
+
+naive_bayes(corpus_lsi_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'LSI',nomePasta)
+random_forest(corpus_lsi_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'LSI',nomePasta)
+mlp(corpus_lsi_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'LSI',nomePasta)
+svm(corpus_lsi_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'LSI',nomePasta)
+
+preencheAvaliacaoFinal(nomeExperimento,nomePasta,nomeArqutivoResultadosCompilados, featureType)
 
 
 
 
 #TODO: fazer a curva de aprendizagem do ganho do algoritmo com a quantidade de elementos para verificar se precisa rodar com tudo etc. 
     #https://www.kaggle.com/residentmario/learning-curves-with-zillow-economics-data/
-
-# =============================================================================
-# LSI
-# =============================================================================
-
-#------------------------------------------------------------------------------
-# SVM MC1
-#------------------------------------------------------------------------------
-
-
-param_grid = {
-    'loss': [ 'modified_huber', 'squared_hinge'],
-    'penalty': ['elasticnet','l2'],
-    'alpha': [1e-4,1e-3]
-    #'l1_ratio': [0, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 1],
-}
-clf_SVM = SGDClassifier(random_state=0, class_weight='balanced',n_jobs=7)
-clf_SVM_grid = grid_search.GridSearchCV(estimator=clf_SVM, param_grid=param_grid,
-                                     scoring='f1_weighted',cv = 3)
-clf_SVM_grid.fit(corpus_treinamento_mc1_lsi_sparse, assuntosMacroClasse1_Treinamento.cd_assunto_nivel_2)
-
-
-print(clf_SVM_grid.best_score_)
-print(clf_SVM_grid.best_params_)
-teste_svm_c1_segunda_execucao = pd.DataFrame(clf_SVM_grid.grid_scores_)
-
-clf_SVM = clf_SVM_grid.best_estimator_
-clf_SVM.fit(corpus_treinamento_mc1_lsi_sparse, assuntosMacroClasse1_Treinamento.cd_assunto_nivel_2)
-predicted_SVM_mc1_lsi =  clf_SVM.predict(corpus_teste_mc1_lsi_sparse)
-np.mean(predicted_SVM_mc1_lsi == assuntosMacroClasse1_Teste.cd_assunto_nivel_2)
-
-
-codigos= pd.DataFrame(assuntosMacroClasse1_Treinamento['cd_assunto_nivel_2'].astype('category').values.describe())
-codigos.reset_index(inplace=True)
-codigos = codigos.categories.tolist()
-
-confusion_matrix_SVM_mc1_lsi = confusion_matrix(assuntosMacroClasse1_Teste['cd_assunto_nivel_2'].astype('category').values,predicted_SVM_mc1_lsi)
-fig = plt.figure(figsize=(10,10))
-
-plot_confusion_matrix(confusion_matrix_SVM_mc1_lsi, codigos,
-                      title='SVM \nMacro Class 1 - TF-IDF\nAccuracy: {0:.3f}'.format(accuracy_score(assuntosMacroClasse1_Teste['cd_assunto_nivel_2'].astype('category').values,predicted_SVM_mc1_lsi)))
-
-plt.savefig('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/imagens/confusion_matrix_SVM_mc1_lsi.png') 
-
-macro_precision,macro_recall,macro_fscore,macro_support=score(assuntosMacroClasse1_Teste['cd_assunto_nivel_2'].astype('category').values,predicted_SVM_mc1_lsi,average='macro')
-micro_precision,micro_recall,micro_fscore,micro_support=score(assuntosMacroClasse1_Teste['cd_assunto_nivel_2'].astype('category').values,predicted_SVM_mc1_lsi,average='weighted')
-
-avaliacaoFinal_MC1_TFIDF.loc[4]= ['SVM','LSI',macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore]
-
-print(classification_report(assuntosMacroClasse1_Teste['cd_assunto_nivel_2'].astype('category').values,predicted_SVM_mc1_lsi))
-print('Micro average precision = {:.2f} (dâ o mesmo peso para cada instância)'.format(precision_score(assuntosMacroClasse1_Teste['cd_assunto_nivel_2'].astype('category').values,predicted_SVM_mc1_lsi,average = 'weighted')))
-print('Macro average precision = {:.2f} (dâ o mesmo peso para cada classe)'.format(precision_score(assuntosMacroClasse1_Teste['cd_assunto_nivel_2'].astype('category').values,predicted_SVM_mc1_lsi,average = 'macro')))
-
 
 
 
