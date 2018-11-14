@@ -32,13 +32,15 @@ from funcoes import *
 # =============================================================================
 # Dinive variaveis globais
 # =============================================================================
-nomeDataSet = 'TRT15_2G_JT_2017'
+nomeDataSet = 'TRT13_2G_JT_2017'
 featureType = 'LSI_200'
 nomeExperimento = nomeDataSet+'_'+featureType+'_CorpusCompleto_CV5'
 numeroExperimento = '3'
 nomePastaRestultados='./Resultados'
 nomeArqutivoResultadosCompilados=nomePastaRestultados+'/resultadosFinaisCompilados.csv'
 nomePasta = nomePastaRestultados + '/Experimento ' + numeroExperimento + ' - ' + nomeExperimento
+
+nomeCore='documentos_2g_trt3'
 
 import os
 if not os.path.exists(nomePasta):
@@ -57,8 +59,8 @@ def marcarDocumentosSolr(field,data, flag):
     for ids in data:
         doc = {'id': ids, field:{'set': flag}}
         documentos.append(doc)
-    solr.index_json('documentos_2g',json.dumps(documentos))
-    solr.commit(openSearcher=True, collection='documentos_2g')
+    solr.index_json(nomeCore,json.dumps(documentos))
+    solr.commit(openSearcher=True, collection=nomeCore)
 
 ##############################################################################    
 ##############################################################################
@@ -73,7 +75,7 @@ def marcarDocumentosSolr(field,data, flag):
 # para popular cada fold.
 # =============================================================================
 query = 'tx_conteudo_documento:[* TO *]'
-solrDataAnalise = solr.query('documentos_2g',{
+solrDataAnalise = solr.query(nomeCore,{
 'q':query,'fl':'id_processo_documento,cd_assunto_trf', 'rows':'300000'
 })
 dfGeral = pd.DataFrame(solrDataAnalise.docs)
@@ -105,13 +107,13 @@ print("--------------------------- passou aqui 2")
 # 1) os que tem menos que a quantidade minima
 # =============================================================================
 query = query + ' AND NOT cd_assunto_trf:(' + codigosAbaixoQuantidadeMinima + ')'
-solrDataAnalise = solr.query('documentos_2g',{
+solrDataAnalise = solr.query(nomeCore,{
 'q':query,'fl':'id,id_processo_documento,cd_assunto_trf', 'rows':'300000'
 })
 dfGeral = pd.DataFrame(solrDataAnalise.docs)  
 recuperaHierarquiaAssuntos(dfGeral)
     
-analisaTodosOsNiveis(dfGeral, nomePasta+'/imagens/TRT15_2GRAU_Distribuicao_De_Processos_Por_Nivel_Assunto_ArvoreCompleta_2017.png', 'Distribuição de Processo Por Nível de Assunto - Árvore Completa')
+analisaTodosOsNiveis(dfGeral, nomePasta+'/imagens/'+nomeDataSet+'Distribuicao_De_Processos_Por_Nivel_Assunto_ArvoreCompleta_2017.png', 'Distribuição de Processo Por Nível de Assunto - Árvore Completa')
 print("--------------------------- passou aqui 3")
 # =============================================================================
 # Fazendo uma análise específica da subarvore do DIREITO DO TRABALHO (Código 864)
@@ -122,7 +124,7 @@ dfGeralJT = dfGeral.query('cd_assunto_nivel_1==' + str(864))
 codigosJT =recuperaFilhosDoNivel1(864)
 codigosJT = ' '.join(map(str, codigosJT)) 
 
-analisaTodosOsNiveis(dfGeralJT, nomePasta+'/imagens/TRT15_2GRAU_Distribuicao_De_Processos_Por_Nivel_Assunto_DiretoDoTrabalho_2017.png', 'Distribuição de Processo Por Nível de Assunto - Árvore de Direito do Trabalho')
+analisaTodosOsNiveis(dfGeralJT, nomePasta+'/imagens/'+nomeDataSet+'Distribuicao_De_Processos_Por_Nivel_Assunto_DiretoDoTrabalho_2017.png', 'Distribuição de Processo Por Nível de Assunto - Árvore de Direito do Trabalho')
 print("--------------------------- passou aqui 4")
 # =============================================================================
 # Marca os elementos que são ja JT (como usa só o assunto filho, nao da pra saber direto la)
@@ -131,7 +133,7 @@ print("--------------------------- passou aqui 4")
 
 
 queryJT = query + ' AND cd_assunto_trf:(' + codigosJT + ')'
-solrDataAnalise = solr.query('documentos_2g',{
+solrDataAnalise = solr.query(nomeCore,{
 'q':queryJT,'fl':'id,id_processo_documento,cd_assunto_trf', 'rows':'300000'
 })
 dfJT = pd.DataFrame(solrDataAnalise.docs)  
@@ -140,7 +142,7 @@ print("--------------------------- passou aqui 5")
 
 
 queryNOT_JT = query + ' AND NOT cd_assunto_trf:(' + codigosJT + ')'
-solrDataAnalise = solr.query('documentos_2g',{
+solrDataAnalise = solr.query(nomeCore,{
 'q':queryNOT_JT,'fl':'id,id_processo_documento,cd_assunto_trf', 'rows':'300000'
 })
 df_NOTJT = pd.DataFrame(solrDataAnalise.docs)  
@@ -148,244 +150,6 @@ marcarDocumentosSolr('isJT',df_NOTJT['id'], 'false')
 query = query + ' AND isJT:true'
 
 print("--------------------------- passou aqui 6")
-# =============================================================================
-# Criando conjuntos de treinamento e teste estratificados
-# =============================================================================
-#Codigo a ser rodado na primeira vez. depois que o Solr já está 'marcado', nao se faz split denovo.
-#solrDataAnalise = solr.query('documentos_2g',{
-#'q':query,'fl':'id,id_processo_documento,cd_assunto_trf', 'rows':'300000'
-#})
-#dfFinal = pd.DataFrame(solrDataAnalise.docs)    
-#
-#recuperaHierarquiaAssuntos(dfFinal)
-
-#df_idProcessos_treinamento, df_idProcessos_teste, df_codigoAssunto_treinamento, df_codigoAssunto_teste = train_test_split(dfGeralJT[['id','id_processo_documento']], dfGeralJT['cd_assunto_nivel_3'],
-#                                                    stratify=dfGeralJT['cd_assunto_nivel_3'], 
-#                                                    test_size=0.3)
-
-# =============================================================================
-# Marca os elementos que serão usados para teste no Solr
-# =============================================================================
-
-#marcarDocumentosSolr('isTeste',df_idProcessos_treinamento['id'], 'false')
-#marcarDocumentosSolr('isTeste',df_idProcessos_teste['id'], 'true')
-
-
-# =============================================================================
-# Se o Solr ja estiver marcado, pode-se carregar treinamento e teste com os comandos abaixo
-# =============================================================================
-#
-#queryTreinamento = query + ' AND NOT isTeste:true'
-#queryTeste  = query + ' AND isTeste:true'
-#
-#solrDataAnalise = solr.query('documentos_2g',{
-#'q':queryTreinamento,'fl':'id, id_processo_documento', 'rows':'300000'
-#})
-#df_idProcessos_treinamento = pd.DataFrame(solrDataAnalise.docs)
-#
-#solrDataAnalise = solr.query('documentos_2g',{
-#'q':queryTeste,'fl':'id, id_processo_documento', 'rows':'300000'
-#})
-#df_idProcessos_teste = pd.DataFrame(solrDataAnalise.docs)    
-#
-#solrDataAnalise = solr.query('documentos_2g',{
-#'q':queryTreinamento,'fl':'cd_assunto_trf', 'rows':'300000'
-#})
-#df_codigoAssunto_treinamento = pd.DataFrame(solrDataAnalise.docs)
-#recuperaHierarquiaAssuntos(df_codigoAssunto_treinamento)
-#df_codigoAssunto_treinamento=df_codigoAssunto_treinamento['cd_assunto_nivel_3']
-#
-#solrDataAnalise = solr.query('documentos_2g',{
-#'q':queryTeste,'fl':'cd_assunto_trf', 'rows':'300000'
-#})
-#df_codigoAssunto_teste = pd.DataFrame(solrDataAnalise.docs)    
-#recuperaHierarquiaAssuntos(df_codigoAssunto_teste)
-#df_codigoAssunto_teste=df_codigoAssunto_teste['cd_assunto_nivel_3']
-
-
-################################################################################################################################
-################################################################################################################################
-################################################################################################################################
-################################################################################################################################
-################################################################################################################################
-
-# =============================================================================
-# Processa conjunto de treinamento e de teste
-# =============================================================================
-
-################################################################################################################################
-# BUSCA DADOS E CRIA O DICIONÁRIO
-################################################################################################################################
-#dicionarioFinal = corpora.Dictionary('')
-#
-#start_time = time.time()
-#listaProcessada = []
-#if os.path.exists('./Data/corpus/listaProcessadaFinal_Treinamento.csv'):
-#  os.remove('./Data/corpus/listaProcessadaFinal_Treinamento.csv')
-#for resCursor in solr.cursor_query('documentos_2g',{'q':queryTreinamento,'rows':'100','fl':'tx_conteudo_documento','sort':'id asc'}):  
-#    listaProcessada = Parallel(n_jobs = 7)(delayed(processa_texto)(documento.get('tx_conteudo_documento')) for documento in resCursor.docs)
-#    dicionarioParcial = corpora.Dictionary(listaProcessada)
-#    dicionarioFinal.merge_with(dicionarioParcial)
-#    with open("./Data/corpus/listaProcessadaFinal_Treinamento.csv", "a") as fp:
-#        wr = csv.writer(fp, dialect='excel')
-#        for row in listaProcessada:
-#            wr.writerow(row)           
-#end_time = time.time() - start_time
-#print('Tempo de processamento do texto de treinamento:' + str(timedelta(seconds=end_time)))
-##2029 segundos -> 33 minutos
-#
-#start_time = time.time()
-#listaProcessada = []
-#if os.path.exists('./Data/corpus/listaProcessadaFinal_Teste.csv'):
-#  os.remove('./Data/corpus/listaProcessadaFinal_Teste.csv')
-#
-#for resCursor in solr.cursor_query('documentos_2g',{'q':queryTeste,'rows':'1000','fl':'tx_conteudo_documento','sort':'id asc'}):  
-#    listaProcessada = Parallel(n_jobs = 7)(delayed(processa_texto)(documento.get('tx_conteudo_documento')) for documento in resCursor.docs)
-#    dicionarioParcial = corpora.Dictionary(listaProcessada)
-#    dicionarioFinal.merge_with(dicionarioParcial)
-#    with open("./Data/corpus/listaProcessadaFinal_Teste.csv", "a") as fp:
-#        wr = csv.writer(fp, dialect='excel')
-#        for row in listaProcessada:
-#            wr.writerow(row)           
-#end_time = time.time() - start_time
-#print('Tempo de processamento do texto de teste:' + str(timedelta(seconds=end_time)))
-#
-#if os.path.exists('./Data/corpus/dicionarioFinal.dict'):
-#  os.remove('./Data/corpus/dicionarioFinal.dict')
-#dicionarioFinal.save('./Data/corpus/dicionarioFinal.dict')    
-#
-################################################################################################################################
-## CRIA VETORES DE TEXTO
-################################################################################################################################
-#
-#
-#
-################################################################################################################################
-#
-##******************************************************************************************************************************
-## Dados de Treinamento
-##******************************************************************************************************************************
-#
-##------------------------------------------------------------------------------
-## Cria o corpus de Bag of Words
-##------------------------------------------------------------------------------
-#start_time = time.time()        
-#class MyCorpus_Treinamento_Doc2Bow(object):
-#    def __iter__(self):
-#        for line in open('./Data/corpus/listaProcessadaFinal_Treinamento.csv'):
-#            yield dicionarioFinal.doc2bow(line.split(','))
-#corpora.MmCorpus.serialize('./Data/corpus/corpusTreinamento_BOW.mm', MyCorpus_Treinamento_Doc2Bow())
-#end_time = time.time() - start_time
-#print('Tempo de criação do matriz BOW de treinamento:' + str(timedelta(seconds=end_time)))
-#
-#
-#corpus_treinamento_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('./Data/corpus/corpusTreinamento_BOW.mm'), tamanho_dicionario).transpose()
-#corpus_treinamento_bow_sparse.shape
-#
-##------------------------------------------------------------------------------
-## Cria o corpus TF-IDF
-##------------------------------------------------------------------------------
-#start_time = time.time()
-#modeloTfidfTreinamento = TfidfModel(corpora.MmCorpus('./Data/corpus/corpusTreinamento_BOW.mm') , id2word=dicionarioFinal, normalize=True)
-#modeloTfidfTreinamento.save('./Data/corpus/corpusTreinamento_TFIDF.tfidf_model')
-#MmCorpus.serialize('./Data/corpus/corpusTreinamento_TFIDF.mm', modeloTfidfTreinamento[corpora.MmCorpus('./Data/corpus/corpusTreinamento_BOW.mm')], progress_cnt=10000)
-#del(modeloTfidfTreinamento)
-#end_time = time.time() - start_time
-#print('Tempo de criação do matriz TD-IDF de treinamento:' + str(timedelta(seconds=end_time)))
-#
-#
-#corpus_treinamento_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('./Data/corpus/corpusTreinamento_TFIDF.mm'), tamanho_dicionario).transpose()
-#corpus_treinamento_tfidf_sparse.shape
-#
-##------------------------------------------------------------------------------
-## Cria o corpus LSI
-##------------------------------------------------------------------------------
-##num_topics=300
-##start_time = time.time()
-##modeloLSITreinamento = LsiModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_TFIDF.mm'), id2word=dicionarioFinal, num_topics=num_topics)
-##modeloLSITreinamento.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_LSI.lsi_model')
-##MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_LSI.mm', modeloLSITreinamento[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_TFIDF.mm')], progress_cnt=10000)
-##del(modeloLSITreinamento)
-##print(time.time() - start_time)
-##
-##corpus_treinamento_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTreinamento_LSI.mm'), num_topics).transpose()
-##corpus_treinamento_lsi_sparse.shape
-#
-##------------------------------------------------------------------------------
-## Busca o target do conjunto de treinamento: assunto de nível 2
-##------------------------------------------------------------------------------
-# 
-#assuntos_Treinamento = solr.query('documentos_2g',{'q':queryTreinamento,'rows':'1000000','fl':'cd_assunto_nivel_2','sort':'id asc'})
-#assuntos_Treinamento = pd.DataFrame(assuntos_Treinamento.docs)    
-#assuntos_Treinamento.shape
-#
-#
-##verifica se o numero de documentos bate com o numero de assuntos
-##assuntosMacroClasse1_Treinamento.shape
-##row_count = sum(1 for line in open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc1_Treinamento.csv"))
-#
-#
-#gc.collect()
-##******************************************************************************************************************************
-## TESTE
-##******************************************************************************************************************************
-#
-##------------------------------------------------------------------------------
-## Cria o corpus de Bag of Words
-##------------------------------------------------------------------------------
-#start_time = time.time()
-#class MyCorpus_Teste_Doc2Bow(object):
-#    def __iter__(self):
-#        for line in open('./Data/corpus/listaProcessadaFinal_Teste.csv'):
-#            yield dicionarioFinal.doc2bow(line.split(','))
-#corpora.MmCorpus.serialize('./Data/corpus/corpusTeste_BOW.mm', MyCorpus_Teste_Doc2Bow())
-#end_time = time.time() - start_time
-#print('Tempo de criação do matriz BOW de teste:' + str(timedelta(seconds=end_time)))
-#
-#corpus_teste_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('./Data/corpus/corpusTeste_BOW.mm'), tamanho_dicionario).transpose()
-#corpus_teste_bow_sparse.shape
-#  
-##------------------------------------------------------------------------------
-## Cria o corpus TF-IDF
-##------------------------------------------------------------------------------
-#start_time = time.time()
-#modeloTfidfTeste = TfidfModel(corpora.MmCorpus('./Data/corpus/corpusTeste_BOW.mm'), id2word=dicionarioFinal, normalize=True)
-#modeloTfidfTeste.save('./Data/corpus/corpusTeste_TFIDF.tfidf_model')
-#MmCorpus.serialize('./Data/corpus/corpusTeste_TFIDF.mm', modeloTfidfTeste[corpora.MmCorpus('./Data/corpus/corpusTeste_BOW.mm')], progress_cnt=10000)
-#end_time = time.time() - start_time
-#print('Tempo de criação do matriz TD-IDF de teste:' + str(timedelta(seconds=end_time)))
-#
-#
-#corpus_teste_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('./Data/corpus/corpusTeste_TFIDF.mm'), tamanho_dicionario).transpose()
-#corpus_teste_tfidf_sparse.shape
-#
-##------------------------------------------------------------------------------
-## Cria o corpus LSI
-##------------------------------------------------------------------------------
-##num_topics_mc1=300
-##start_time = time.time()
-##modeloLSITeste = LsiModel(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_TFIDF.mm'), id2word=dicionarioFinal, num_topics=num_topics)
-##modeloLSITeste.save('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_LSI.lsi_model')
-##MmCorpus.serialize('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_LSI.mm', modeloLSITeste[corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_TFIDF.mm')], progress_cnt=10000)
-##del(modeloLSITeste)
-##print(time.time() - start_time)
-##
-##corpus_teste_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/corpusTeste_TFIDF.mm'), num_topics).transpose()
-##corpus_teste_lsi_sparse.shape
-#
-##------------------------------------------------------------------------------
-## Busca o target do conjunto de teste: assunto de nível 2
-##------------------------------------------------------------------------------
-#assuntos_Teste = solr.query('documentos_2g',{'q':queryTeste,'rows':'1000000','fl':'cd_assunto_nivel_2','sort':'id asc'})
-#assuntos_Teste = pd.DataFrame(assuntos_Teste.docs)    
-#assuntos_Teste.shape
-#
-##verifica se o numero de documentos bate com o numero de assuntos
-##assuntosMacroClasse1_Teste.shape
-##row_count = sum(1 for line in open("/home/anarocha/Documentos/myGit/git/classificadorDeAssuntos/Data/corpus/listaProcessadaFinal_mc1_Teste.csv"))
-
-
-
 
 ####################################################################################################################################
 # =============================================================================
@@ -394,13 +158,13 @@ print("--------------------------- passou aqui 6")
 dicionarioFinal = corpora.Dictionary('')
 start_time = time.time()
 listaProcessada = []
-if os.path.exists('./Data/corpus/listaProcessadaFinal_CorpusCompleto_JT_2017.csv'):
-  os.remove('./Data/corpus/listaProcessadaFinal_CorpusCompleto_JT_2017.csv')
-for resCursor in solr.cursor_query('documentos_2g',{'q':query,'rows':'100','fl':'tx_conteudo_documento','sort':'id asc'}):  
+if os.path.exists('./Data/corpus/listaProcessadaFinal_'+nomeDataSet+'_CorpusCompleto.csv'):
+  os.remove('./Data/corpus/listaProcessadaFinal_'+nomeDataSet+'_CorpusCompleto.csv')
+for resCursor in solr.cursor_query(nomeCore,{'q':query,'rows':'100','fl':'tx_conteudo_documento','sort':'id asc'}):  
     listaProcessada = Parallel(n_jobs = 7)(delayed(processa_texto)(documento.get('tx_conteudo_documento')) for documento in resCursor.docs)
     dicionarioParcial = corpora.Dictionary(listaProcessada)
     dicionarioFinal.merge_with(dicionarioParcial)
-    with open("./Data/corpus/listaProcessadaFinal_CorpusCompleto_JT_2017.csv", "a") as fp:
+    with open('./Data/corpus/listaProcessadaFinal_'+nomeDataSet+'_CorpusCompleto.csv', "a") as fp:
         wr = csv.writer(fp, dialect='excel')
         for row in listaProcessada:
             wr.writerow(row)           
@@ -409,16 +173,12 @@ print('Tempo de processamento do texto:' + str(timedelta(seconds=end_time)))
 #2029 segundos -> 33 minutos
 print("--------------------------- passou aqui 7")
 
-if os.path.exists('./Data/corpus/dicionarioFinal_CorpusCompleto_JT_2017.dict'):
-  os.remove('./Data/corpus/dicionarioFinal_CorpusCompleto_JT_2017.dict')
-dicionarioFinal.save('./Data/corpus/dicionarioFinal_CorpusCompleto_JT_2017.dict')    
-
-
-
 #------------------------------------------------------------------------------
 # Salva dicionario
 #------------------------------------------------------------------------------
-
+if os.path.exists('./Data/corpus/dicionarioFinal_'+nomeDataSet+'_CorpusCompleto.dict'):
+  os.remove('./Data/corpus/dicionarioFinal_'+nomeDataSet+'_CorpusCompleto.dict')
+dicionarioFinal.save('./Data/corpus/dicionarioFinal_'+nomeDataSet+'_CorpusCompleto.dict')    
 
 #carrega dicionaria
 #dicionarioFinal=corpora.Dictionary.load('./Data/corpus/dicionarioFinal_CorpusCompleto_JT_2017.dict', mmap='r')
@@ -477,7 +237,7 @@ corpus_lsi_sparse.shape
 # =============================================================================
 # Recupera todos os assuntos
 # =============================================================================
-assuntosCorpusInteiro = solr.query('documentos_2g',{'q':query,'rows':'1000000','fl':'cd_assunto_trf','sort':'id asc'})
+assuntosCorpusInteiro = solr.query(nomeCore,{'q':query,'rows':'1000000','fl':'cd_assunto_trf','sort':'id asc'})
 assuntosCorpusInteiro = pd.DataFrame(assuntosCorpusInteiro.docs)    
 assuntosCorpusInteiro.shape
 recuperaHierarquiaAssuntos(assuntosCorpusInteiro)
