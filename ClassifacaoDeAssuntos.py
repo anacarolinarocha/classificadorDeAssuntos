@@ -32,10 +32,10 @@ from funcoes import *
 # =============================================================================
 # Dinive variaveis globais
 # =============================================================================
-nomeDataSet = 'TRT13_2G_JT_2017'
+nomeDataSet = 'TRT13_2G_JT'
 featureType = 'LSI_200'
 nomeExperimento = nomeDataSet+'_'+featureType+'_CorpusCompleto_CV5'
-numeroExperimento = '3'
+numeroExperimento = '4'
 nomePastaRestultados='./Resultados'
 nomeArqutivoResultadosCompilados=nomePastaRestultados+'/resultadosFinaisCompilados.csv'
 nomePasta = nomePastaRestultados + '/Experimento ' + numeroExperimento + ' - ' + nomeExperimento
@@ -101,7 +101,6 @@ for filho in filhosAbaixoQuantidadeMinima:
 codigosAbaixoQuantidadeMinima = ' '.join(map(str, codigosAbaixoQuantidadeMinima)) 
 codigosAbaixoQuantidadeMinima = codigosAbaixoQuantidadeMinima.replace('.0', '')
 #um total de 92208 caiu para 91211 quando tiramos os com menos de 50.
-print("--------------------------- passou aqui 2")        
 # =============================================================================
 # Recupera o conjunto de dados, já excluindo:
 # 1) os que tem menos que a quantidade minima
@@ -114,7 +113,6 @@ dfGeral = pd.DataFrame(solrDataAnalise.docs)
 recuperaHierarquiaAssuntos(dfGeral)
     
 analisaTodosOsNiveis(dfGeral, nomePasta+'/imagens/'+nomeDataSet+'Distribuicao_De_Processos_Por_Nivel_Assunto_ArvoreCompleta_2017.png', 'Distribuição de Processo Por Nível de Assunto - Árvore Completa')
-print("--------------------------- passou aqui 3")
 # =============================================================================
 # Fazendo uma análise específica da subarvore do DIREITO DO TRABALHO (Código 864)
 # =============================================================================
@@ -125,11 +123,10 @@ codigosJT =recuperaFilhosDoNivel1(864)
 codigosJT = ' '.join(map(str, codigosJT)) 
 
 analisaTodosOsNiveis(dfGeralJT, nomePasta+'/imagens/'+nomeDataSet+'Distribuicao_De_Processos_Por_Nivel_Assunto_DiretoDoTrabalho_2017.png', 'Distribuição de Processo Por Nível de Assunto - Árvore de Direito do Trabalho')
-print("--------------------------- passou aqui 4")
+
 # =============================================================================
 # Marca os elementos que são ja JT (como usa só o assunto filho, nao da pra saber direto la)
 # =============================================================================
-
 
 
 queryJT = query + ' AND cd_assunto_trf:(' + codigosJT + ')'
@@ -138,7 +135,6 @@ solrDataAnalise = solr.query(nomeCore,{
 })
 dfJT = pd.DataFrame(solrDataAnalise.docs)  
 marcarDocumentosSolr('isJT',dfJT['id'], 'true')
-print("--------------------------- passou aqui 5")
 
 
 queryNOT_JT = query + ' AND NOT cd_assunto_trf:(' + codigosJT + ')'
@@ -149,7 +145,23 @@ df_NOTJT = pd.DataFrame(solrDataAnalise.docs)
 marcarDocumentosSolr('isJT',df_NOTJT['id'], 'false')
 query = query + ' AND isJT:true'
 
-print("--------------------------- passou aqui 6")
+# =============================================================================
+# Analisa a representatividade de uma amostra
+# =============================================================================
+countGeral_nivel3 = dfGeral.groupby('cd_assunto_nivel_3').id_processo_documento.count()
+countGeral_nivel3=pd.DataFrame(countGeral_nivel3)
+countGeral_nivel3.sort_values(['id_processo_documento'], ascending=False)
+
+
+
+#pega um ano pra traz, considerando que os ultimos dados foram os de outubro.
+query_2017_2018 = query + ' AND dt_juntada:[2017-11-01T00:00:58.518Z TO 2018-10-30T23:59:58.518Z]'
+solrDataAnalise = solr.query(nomeCore,{
+'q':query_2017_2018,'fl':'id,id_processo_documento,cd_assunto_trf', 'rows':'300000'
+})
+dfJT_2017_2018 = pd.DataFrame(solrDataAnalise.docs)  
+recuperaHierarquiaAssuntos(dfJT_2017_2018)
+    
 
 ####################################################################################################################################
 # =============================================================================
@@ -181,7 +193,7 @@ if os.path.exists('./Data/corpus/dicionarioFinal_'+nomeDataSet+'_CorpusCompleto.
 dicionarioFinal.save('./Data/corpus/dicionarioFinal_'+nomeDataSet+'_CorpusCompleto.dict')    
 
 #carrega dicionaria
-#dicionarioFinal=corpora.Dictionary.load('./Data/corpus/dicionarioFinal_CorpusCompleto_JT_2017.dict', mmap='r')
+#dicionarioFinal=corpora.Dictionary.load('./Data/corpus/dicionarioFinal_TRT13_2G_JT_CorpusCompleto.dict', mmap='r')
 tamanho_dicionario = len(dicionarioFinal.keys())
 tamanho_dicionario
 
@@ -215,24 +227,6 @@ print('Tempo de criação do matriz TD-IDF:' + str(timedelta(seconds=end_time)))
 
 corpus_tfidf_sparse = matutils.corpus2csc(corpora.MmCorpus('./Data/corpus/CorpusCompleto_TDIDF_'+nomeDataSet+'.mm'), tamanho_dicionario).transpose()
 corpus_tfidf_sparse.shape
-
-#------------------------------------------------------------------------------
-# Cria o corpus LSI
-#------------------------------------------------------------------------------
-num_topics=200
-start_time = time.time()
-modeloLSITreinamento = LsiModel(corpora.MmCorpus('./Data/corpus/CorpusCompleto_TDIDF_'+nomeDataSet+'.mm'), id2word=dicionarioFinal, num_topics=num_topics)
-modeloLSITreinamento.save('./Data/corpus/corpus_LSI_'+str(num_topics)+'_'+nomeDataSet+'.mm')
-MmCorpus.serialize('./Data/corpus/corpus_LSI_'+str(num_topics)+'_'+nomeDataSet+'.mm', modeloLSITreinamento[corpora.MmCorpus('./Data/corpus/CorpusCompleto_TDIDF_'+nomeDataSet+'.mm')], progress_cnt=10000)
-end_time = time.time() - start_time
-print('Tempo de processamento do LSI:' + str(timedelta(seconds=end_time)))
-#Tempo de processamento do LSI:0:13:00.940066
-corpus_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('./Data/corpus/corpus_LSI_'+str(num_topics)+'_'+nomeDataSet+'.mm'), num_topics).transpose()
-corpus_lsi_sparse.shape
-
-
-corpus_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('./Data/corpus/corpus_LSI_'+str(200)+'_'+nomeDataSet+'.mm'), 200).transpose()
-corpus_lsi_sparse.shape
 
 # =============================================================================
 # Recupera todos os assuntos
@@ -284,58 +278,65 @@ from funcoes import *
 #------------------------------------------------------------------------------
 
 
+#------------------------------------------------------------------------------
+# Cria o corpus LSI
+#------------------------------------------------------------------------------
+nomeDataSet = 'TRT13_2G_JT'
+featureType = 'LSI_200'
+nomeExperimento = nomeDataSet+'_'+featureType+'_CorpusCompleto_CV5'
+numeroExperimento = '6'
+nomePastaRestultados='./Resultados'
+nomeArqutivoResultadosCompilados=nomePastaRestultados+'/resultadosFinaisCompilados.csv'
+nomePasta = nomePastaRestultados + '/Experimento ' + numeroExperimento + ' - ' + nomeExperimento
+
+nomeCore='documentos_2g_trt3'
+
+import os
+if not os.path.exists(nomePasta):
+    os.makedirs(nomePasta)
+    os.makedirs(nomePasta+'/imagens')
+
+num_topics=200
+start_time = time.time()
+modeloLSITreinamento = LsiModel(corpora.MmCorpus('./Data/corpus/CorpusCompleto_TDIDF_'+nomeDataSet+'.mm'), id2word=dicionarioFinal, num_topics=num_topics)
+modeloLSITreinamento.save('./Data/corpus/corpus_LSI_'+str(num_topics)+'_'+nomeDataSet+'.mm')
+MmCorpus.serialize('./Data/corpus/corpus_LSI_'+str(num_topics)+'_'+nomeDataSet+'.mm', modeloLSITreinamento[corpora.MmCorpus('./Data/corpus/CorpusCompleto_TDIDF_'+nomeDataSet+'.mm')], progress_cnt=10000)
+end_time = time.time() - start_time
+print('Tempo de processamento do LSI:' + str(timedelta(seconds=end_time)))
+#Tempo de processamento do LSI:0:13:00.940066
+corpus_lsi_sparse = matutils.corpus2csc(corpora.MmCorpus('./Data/corpus/corpus_LSI_'+str(num_topics)+'_'+nomeDataSet+'.mm'), num_topics).transpose()
+corpus_lsi_sparse.shape
+
+
 naive_bayes(corpus_lsi_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'LSI',nomePasta)
 random_forest(corpus_lsi_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'LSI',nomePasta)
 mlp(corpus_lsi_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'LSI',nomePasta)
-svm(corpus_lsi_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'LSI',nomePasta)
+svm_bagging(corpus_lsi_sparse, assuntosCorpusInteiro['cd_assunto_nivel_3'], classes,'LSI',nomePasta)
 
 preencheAvaliacaoFinal(nomeExperimento,nomePasta,nomeArqutivoResultadosCompilados, featureType)
 
-
+def preencheAvaliacaoFinal(nomeExperimento,nomePasta,nomeArquivoResultadosCompilados,featureType):
+    
+    i=0
+    for modelo in modelos:
+        avaliacaoFinal.loc[i]=[nomeExperimento,
+                            modelo.getNome(),
+                          featureType,
+                           modelo.getMacroPrecision(),
+                           modelo.getMacroRecall(),
+                           modelo.getMacroFscore(),
+                           modelo.getMicroPrecision(),
+                           modelo.getMicroRecall(),
+                           modelo.getMicroFscore(),
+                           modelo.getTempoProcessamento()]
+        i+=1
+        nomeArquivo = nomePasta+'/avaliacaoFinal_'+nomeExperimento +'.csv'
+        avaliacaoFinal.to_csv(nomeArquivo, sep=';')
+        avaliacaoFinal.to_csv(nomeArquivoResultadosCompilados, sep=';',mode='a', header=False)
 
 
 #TODO: fazer a curva de aprendizagem do ganho do algoritmo com a quantidade de elementos para verificar se precisa rodar com tudo etc. 
     #https://www.kaggle.com/residentmario/learning-curves-with-zillow-economics-data/
-
-
-
-# =============================================================================
-# Ensemble
-# =============================================================================
-from sklearn.ensemble import VotingClassifier
-estimators = []
-
-model1 = MultinomialNB(class_prior=None,fit_prior=True)
-model2 = clf_SVM_mc1_tfidf = SGDClassifier(loss='modified_huber', penalty='l2',alpha=1e-3, n_iter=5, random_state=42)
-model3 = clf_RF_mc1_tfidf = RandomForestClassifier(bootstrap=True, class_weight=None, criterion='gini',
-            max_depth=50, max_features='auto', max_leaf_nodes=None,
-            min_impurity_decrease=0.0, min_impurity_split=None,
-            min_samples_leaf=50, min_samples_split=50,
-            min_weight_fraction_leaf=0.0, n_estimators=10, n_jobs=7,
-            oob_score=False, random_state=0, verbose=0, warm_start=False)
-model4 = clf_MLP_mc1_tfidf = MLPClassifier(activation='relu', alpha=1e-05, batch_size='auto',
-       beta_1=0.9, beta_2=0.999, early_stopping=False,
-       epsilon=1e-08, hidden_layer_sizes=(10, 5), learning_rate='constant',
-       learning_rate_init=0.001, max_iter=200, momentum=0.9, 
-       nesterovs_momentum=True, power_t=0.5, random_state=1, shuffle=True,
-       solver='lbfgs', tol=0.0001, validation_fraction=0.1, verbose=False,
-       warm_start=False)
-
-estimators.append(('Naive Bayes', model1))
-estimators.append(('SVM', model2))
-estimators.append(('Random Forest', model3))
-#estimators.append(('Naive Bayes', model4))
-# create the ensemble model
-ensemble = VotingClassifier(estimators)
-
-from sklearn import model_selection
-kfold = model_selection.KFold(n_splits=5, random_state=12)
-results = model_selection.cross_val_score(ensemble, corpus_treinamento_mc2_tfidf_sparse, assuntosMacroClasse2_Treinamento, cv=kfold)
-print(results.mean())
-
-
-type(corpus_treinamento_mc3_tfidf_sparse)
-teste = corpus_treinamento_mc1_tfidf_sparse.todense()
 
 
 

@@ -286,7 +286,9 @@ BEGIN
 		    AND doc.in_ativo = 'S'
 		  	AND ptrf.cd_processo_status = 'D'::bpchar
 		    AND pa.in_assunto_principal = 'S' and ptrf.in_segredo_justica = 'N' and doc.in_documento_sigiloso = 'N'
-			AND doc.id_tipo_processo_documento = (SELECT id_tipo_processo_documento FROM pje.tb_tipo_processo_documento WHERE ds_tipo_processo_documento = 'Recurso Ordinário');
+			AND doc.id_tipo_processo_documento = (SELECT id_tipo_processo_documento FROM pje.tb_tipo_processo_documento WHERE ds_tipo_processo_documento = 'Recurso Ordinário')
+            AND doc.ds_instancia = '1' 
+            AND dt_juntada < '2018-11-01' ;
            
 
 	ALTER TABLE pje_pte.vs_pte_documento_indexavel

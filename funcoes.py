@@ -22,7 +22,7 @@ import seaborn as sns
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.naive_bayes import ComplementNB
 from sklearn.naive_bayes import GaussianNB
-from sklearn.svm import SVC
+from sklearn.svm import LinearSVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import precision_recall_fscore_support as score
@@ -242,8 +242,8 @@ def plot_confusion_matrix(cm, classes,
         print('Confusion matrix, without normalization')
 
     print(cm)
-    plt.figure(figsize=(25,25))    
-    plt.rcParams.update({'font.size': 12})
+    plt.figure(figsize=(35,35))    
+    plt.rcParams.update({'font.size': 10})
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.title(title)
     plt.colorbar()
@@ -312,7 +312,7 @@ def cria_grafico_barra(data, title, ylabel, xlabel, fontSize, figSize_x, figSize
 def naive_bayes(x, y, classes,featureType,nomePasta):
     start_time = time.time()
     clf_NB = ComplementNB()
-    predicted_NB = cross_val_predict(clf_NB, x, y, cv=5, n_jobs=1)
+    predicted_NB = cross_val_predict(clf_NB, x, y, cv=5, n_jobs=6)
     
     macro_precision,macro_recall,macro_fscore,macro_support=score(y,predicted_NB,average='macro')
     micro_precision,micro_recall,micro_fscore,micro_support=score(y,predicted_NB,average='weighted')
@@ -344,8 +344,8 @@ def naive_bayes(x, y, classes,featureType,nomePasta):
 def svm(x, y, classes,featureType, nomePasta):
     start_time = time.time()
     
-    clf_SVM = SVC(random_state=0, class_weight='balanced')
-    predicted_SVM = cross_val_predict(clf_SVM, x, y, cv=5, n_jobs=8)
+    clf_SVM = LinearSVC(random_state=0, class_weight='balanced')
+    predicted_SVM = cross_val_predict(clf_SVM, x, y, cv=5, n_jobs=6)
     
     macro_precision,macro_recall,macro_fscore,macro_support=score(y,predicted_SVM,average='macro')
     micro_precision,micro_recall,micro_fscore,micro_support=score(y,predicted_SVM,average='weighted')
@@ -370,6 +370,40 @@ def svm(x, y, classes,featureType, nomePasta):
     global  modelos
     modelos.append(modeloSVM)
     
+# =============================================================================
+# SVM (SEM GRID)
+# =============================================================================
+from sklearn.ensemble import BaggingClassifier
+def svm_bagging(x, y, classes,featureType, nomePasta):
+    start_time = time.time()
+    
+    clf_SVM = BaggingClassifier(LinearSVC(random_state=0, class_weight='balanced'),bootstrap=False)
+    predicted_SVM = cross_val_predict(clf_SVM, x, y, cv=5, n_jobs=8)
+    
+    macro_precision,macro_recall,macro_fscore,macro_support=score(y,predicted_SVM,average='macro')
+    micro_precision,micro_recall,micro_fscore,micro_support=score(y,predicted_SVM,average='weighted')
+    confusion_matrix_SVM = confusion_matrix(y,predicted_SVM)
+    
+    matrixHeaderString = 'SVM  - ' +featureType + '\nMacro/Micro Precisão: {0:.3f}/{0:.3f}'.format(macro_precision,micro_precision)
+    
+    plot_simple_confusion_matrix(confusion_matrix_SVM, classes, title=matrixHeaderString)
+    figureFile = nomePasta + '/imagens/simple_confusion_matrix_SVM_'+ str(featureType) +'.png'
+    plt.savefig(figureFile) 
+    
+    
+    plot_confusion_matrix(confusion_matrix_SVM, classes, title=matrixHeaderString)
+    figureFile = nomePasta + '/imagens/confusion_matrix_SVM_'+ featureType+'.png'
+    plt.savefig(figureFile) 
+    
+    end_time = time.time() - start_time
+    print('Tempo da execução do SVM_bagging:' + str(timedelta(seconds=end_time)))
+    
+    modeloSVM  = Modelo('SVM_bagging', featureType,str(timedelta(seconds=end_time)), None, clf_SVM, None, macro_precision,macro_recall,macro_fscore,micro_precision,micro_recall,micro_fscore)
+    
+    global  modelos
+    modelos.append(modeloSVM)
+    
+    
     
 # =============================================================================
 # Random Forest (SEM GRID)
@@ -377,7 +411,7 @@ def svm(x, y, classes,featureType, nomePasta):
 def random_forest(x, y, classes,featureType, nomePasta):
     start_time = time.time()
     clf_RF = RandomForestClassifier()
-    predicted_RF =  cross_val_predict(clf_RF, x, y, cv=5, n_jobs=5)
+    predicted_RF =  cross_val_predict(clf_RF, x, y, cv=5, n_jobs=6)
     
     macro_precision,macro_recall,macro_fscore,macro_support=score(y,predicted_RF,average='macro')
     micro_precision,micro_recall,micro_fscore,micro_support=score(y,predicted_RF,average='weighted')
@@ -407,7 +441,7 @@ def random_forest(x, y, classes,featureType, nomePasta):
 def mlp(x, y, classes,featureType, nomePasta):
     start_time = time.time()
     clf_MLP = MLPClassifier()
-    predicted_MLP = cross_val_predict(clf_MLP, x, y, cv=5, n_jobs=7)
+    predicted_MLP = cross_val_predict(clf_MLP, x, y, cv=5, n_jobs=6)
     
     macro_precision,macro_recall,macro_fscore,macro_support=score(y,predicted_MLP,average='macro')
     micro_precision,micro_recall,micro_fscore,micro_support=score(y,predicted_MLP,average='weighted')
