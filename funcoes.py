@@ -441,7 +441,7 @@ def random_forest(x, y, classes,featureType, nomePasta):
 def mlp(x, y, classes,featureType, nomePasta):
     start_time = time.time()
     clf_MLP = MLPClassifier()
-    predicted_MLP = cross_val_predict(clf_MLP, x, y, cv=5, n_jobs=6)
+    predicted_MLP = cross_val_predict(clf_MLP, x, y, cv=5, n_jobs=5)
     
     macro_precision,macro_recall,macro_fscore,macro_support=score(y,predicted_MLP,average='macro')
     micro_precision,micro_recall,micro_fscore,micro_support=score(y,predicted_MLP,average='weighted')
