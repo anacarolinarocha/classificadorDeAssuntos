@@ -29,13 +29,14 @@ from modelo import Modelo
 from funcoes import *
 
     
+
 # =============================================================================
 # Dinive variaveis globais
 # =============================================================================
 nomeDataSet = 'TRT13_2G_JT_REDUZIDO'
-featureType = 'TFIDF'
+featureType = 'NAIVE_BAYES'
 nomeExperimento = nomeDataSet+'_'+featureType+'_CorpusCompleto_CV5'
-numeroExperimento = '12'
+numeroExperimento = '15'
 nomePastaRestultados='./Resultados'
 nomeArqutivoResultadosCompilados=nomePastaRestultados+'/resultadosFinaisCompilados.csv'
 nomePasta = nomePastaRestultados + '/Experimento ' + numeroExperimento + ' - ' + nomeExperimento
@@ -208,8 +209,9 @@ if os.path.exists('./Data/corpus/dicionarioFinal_'+nomeDataSet+'_CorpusCompleto.
   os.remove('./Data/corpus/dicionarioFinal_'+nomeDataSet+'_CorpusCompleto.dict')
 dicionarioFinal.save('./Data/corpus/dicionarioFinal_'+nomeDataSet+'_CorpusCompleto.dict')    
 
+
 #carrega dicionaria
-#dicionarioFinal=corpora.Dictionary.load('./Data/corpus/dicionarioFinal_TRT13_2G_JT_REDUZIDO_CorpusCompleto.dict', mmap='r')
+dicionarioFinal=corpora.Dictionary.load('./Data/corpus/dicionarioFinal_'+nomeDataSet+'_CorpusCompleto.dict', mmap='r')
 tamanho_dicionario = len(dicionarioFinal.keys())
 tamanho_dicionario
 
@@ -228,6 +230,7 @@ print('Tempo de criação do matriz BOW:' + str(timedelta(seconds=end_time)))
 
 corpus_bow_sparse = matutils.corpus2csc(corpora.MmCorpus('./Data/corpus/CorpusCompleto_BOW_'+nomeDataSet+'.mm'), tamanho_dicionario).transpose()
 corpus_bow_sparse.shape
+
 
 #------------------------------------------------------------------------------
 # Cria o corpus TF-IDF
