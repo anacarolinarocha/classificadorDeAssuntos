@@ -43,6 +43,7 @@ from joblib import Parallel, delayed
 
 from modelo import Modelo
 
+nltk.download('stopwords')
 stopwords = nltk.corpus.stopwords.words('portuguese')
 stopwords.extend(['microsoftinternetexplorer','false','none','trabalho','juiz',
                   'reclamado','reclamada','autos','autor','excelentissimo',
@@ -50,7 +51,7 @@ stopwords.extend(['microsoftinternetexplorer','false','none','trabalho','juiz',
 stopwords = [normalize('NFKD', palavra).encode('ASCII','ignore').decode('ASCII') for palavra in stopwords]
 
 
-#nltk.download('rslp')
+nltk.download('rslp')
 stemmer = nltk.stem.RSLPStemmer()
 
 
@@ -58,7 +59,7 @@ avaliacaoFinal = pd.DataFrame(columns=['Experimento','Model','Features','Macro P
 
 modelos=[]
 
-assuntos = pd.read_csv('./Data/hierarquia_de_assuntos.csv')
+assuntos = pd.read_csv('./hierarquia_de_assuntos.csv')
 assuntos = assuntos.replace(np.nan, 0, regex=True)
 assuntosNivel1 = pd.Series(assuntos['cd_assunto_nivel_1'])
 assuntosNivel2 = pd.Series(assuntos['cd_assunto_nivel_2'])
