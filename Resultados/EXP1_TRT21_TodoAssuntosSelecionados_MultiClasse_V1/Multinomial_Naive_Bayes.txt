@@ -1,0 +1,10 @@
+EXP1_TRT21_TodoAssuntosSelecionados_MultiClasse_V1
+Multinomial_Naive_Bayes
+Tempo de treinamento: 0:00:58.751491
+Acurácia:       0.18442697861451288
+macro_precision 0.252605439481169 
+macro_recall    0.23740350806999913 
+macro_fscore    0.1814054341890423
+micro_precision 0.46482704893528676 
+micro_recall    0.18241637726192653 
+micro_fscore    0.16869331988929684

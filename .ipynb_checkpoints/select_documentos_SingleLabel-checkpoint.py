@@ -129,4 +129,5 @@ WHERE doc.id_processo IN
 			HAVING count(id_processo_documento) = 1) AS t
 		)
 AND doc.id_tipo_processo_documento = (SELECT id_tipo_processo_documento FROM tb_tipo_processo_documento WHERE ds_tipo_processo_documento = 'Recurso Ordinário') 
-limit 1000"""
+AND docbin.ds_extensao is null
+limit 2000"""
