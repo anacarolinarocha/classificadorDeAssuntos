@@ -71,36 +71,39 @@ del(assuntos_sheet)
 # -----------------------------------------------------------------------------------------------------
 with open('/home/anarocha/myGit/classificadorDeAssuntos/Scripts/001-Consultas/002-SelectDocumentosMultiClasse.sql', 'r') as file:
     sql = file.read().replace('\n', ' ')
-engine = create_engine(credentials_trt19_2g) #bugfix trt 21
+engine = create_engine(credentials["TRT" + '18' + "-2G"]) #bugfix trt 21
+
 start_time = time.time()
 teste = """
 
-CREATE SERVER foreign_server
-        FOREIGN DATA WRAPPER postgres_fdw
-        OPTIONS (host '10.0.3.150', port '5192', dbname 'pje_2grau_bugfix_log');
+
+create server foreign_server
+        foreign data wrapper postgres_fdw
+        options (host '10.0.3.150', port '5192', dbname 'pje_2grau_bugfix_log');
         
-CREATE USER MAPPING FOR bugfix
-        SERVER foreign_server
-        OPTIONS (user 'bugfix', password 'bii6f1x');
+create user mapping for bugfix
+        server foreign_server
+        options (user 'bugfix', password 'bii6f1x');
        
 
-CREATE FOREIGN TABLE tb_log_fdw (
+create foreign table tb_log_fdw (
         ds_entidade text,
         ds_id_entidade text,
         dt_log timestamp
 )
-        SERVER foreign_server
-        OPTIONS (schema_name 'pje', table_name 'tb_log');
+        server foreign_server
+        options (schema_name 'pje', table_name 'tb_log');
 """
-
-df_mc = pd.read_sql_query(sql, engine)
+import sqlalchemy
+from sqlalchemy import create_engine
+df_mc = pd.read_sql_query(sqlalchemy.text(sql), engine)
 total_time = time.time() - start_time
 print('Tempo para recuperar documentos:' + str(timedelta(seconds=total_time)))
 df_mc.to_csv('./Dados/naoPublicavel/listaProcessos_MultiLabel_TRT19_2G_2010-2019.csv', sep='#', quoting=csv.QUOTE_NONNUMERIC)
 
 df_mc.to_csv('./Dados/naoPublicavel/listaProcessos_MultiLabel_TRT24_2G_2010-2019.csv', sep='#', quoting=csv.QUOTE_NONNUMERIC)
 df_mc_07 = pd.read_csv('./Dados/naoPublicavel/listaProcessos_MultiLabel_TRT07_2G_2010-2019.csv', sep='#', quoting=csv.QUOTE_NONNUMERIC)
-df_mc_21 = pd.read_csv('./Dados/naoPublicavel/listaProcessos_MultiLabel_TRT21_2G_2010-2019.csv', sep='#', quoting=csv.QUOTE_NONNUMERIC)
+df_mc_21 = pd.read_csv('/mnt/04E61847E6183AFE/classificadorAssuntos/Dados/naoPublicavel/listaProcessos_MultiLabel_TRT21_2G_2010-2019.csv', sep='#', quoting=csv.QUOTE_NONNUMERIC)
 df_mc_07.head(2)
 df_mc_21.head(2)
 del(df_mc)
@@ -283,6 +286,7 @@ y_pred = clf_ovr.predict(X_test_mc_tfidf)
 clf_ovr.score(X_test_mc_tfidf,y_test_mc)
 print('macro_precision %s \nmacro_recall    %s \nmacro_fscore    %s' % score(y_test_mc,y_pred,average='macro')[:3])
 print('micro_precision %s \nmicro_recall    %s \nmicro_fscore    %s' % score(y_test_mc,y_pred,average='weighted')[:3])
+#print(classification_report(y_test,multi1.predict(x_test),target_names=multi1.classes_)) SIMPLIFICA....
 
 resultado_svc = """
 # ------------------------------------------
@@ -313,3 +317,7 @@ pickle.dump(clf_ovr, open(filename, 'wb'))
 
 # keep: https://www.anoreg.org.br/site/2019/06/10/cnj-inteligencia-artificial-sera-usada-para-verificar-qualidade-de-dados-processuais/
 
+import pandas_profiling
+df_mc_21.profile_report(style={'full_width':True})
+profile = df.profile_report(title='Pandas Profiling Report')
+profile.to_file(output_file="./profile.html")

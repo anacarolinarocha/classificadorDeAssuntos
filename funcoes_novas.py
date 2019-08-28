@@ -1,17 +1,8 @@
-from bs4 import BeautifulSoup
 import pandas as pd
 import matplotlib.pyplot as plt
 from collections import Counter
-import lxml
+s
 
-#----------------------------------------------------------------------------------------------------------------------
-def removeHTML(texto):
-    """
-    Função para remover HTML
-    :param texto:
-    :return: texto sem tags HTML
-    """
-    return BeautifulSoup(texto, 'lxml').get_text(strip=True)
 
 #----------------------------------------------------------------------------------------------------------------------
 def plot_ys_mc(ys_series, ys_title, path):

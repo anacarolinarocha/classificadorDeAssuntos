@@ -1,60 +1,61 @@
+
 WITH vs_nivel_assunto as(SELECT b.*,
 CASE
 		WHEN b.nivel = '2' THEN
-			(SELECT pai.cd_assunto_trf::text FROM tb_assunto_trf pai WHERE pai.id_assunto_trf = (SELECT aa.id_assunto_trf_superior FROM pje.tb_assunto_trf aa WHERE id_assunto_trf = b.id_assunto_trf))
+			(SELECT pai.cd_assunto_trf FROM tb_assunto_trf pai WHERE pai.id_assunto_trf = (SELECT aa.id_assunto_trf_superior FROM pje.tb_assunto_trf aa WHERE id_assunto_trf = b.id_assunto_trf))
 		WHEN b.nivel = '3' THEN
-			(SELECT avo.cd_assunto_trf::text FROM tb_assunto_trf avo WHERE avo.id_assunto_trf =
+			(SELECT avo.cd_assunto_trf FROM tb_assunto_trf avo WHERE avo.id_assunto_trf =
 			(SELECT pai.id_assunto_trf_superior FROM tb_assunto_trf pai WHERE pai.id_assunto_trf = (SELECT aa.id_assunto_trf_superior FROM pje.tb_assunto_trf aa WHERE id_assunto_trf = b.id_assunto_trf)))
 		WHEN b.nivel = '4' THEN
-			(SELECT bisavo.cd_assunto_trf::text FROM tb_assunto_trf bisavo WHERE bisavo.id_assunto_trf =
+			(SELECT bisavo.cd_assunto_trf FROM tb_assunto_trf bisavo WHERE bisavo.id_assunto_trf =
 			(SELECT avo.id_assunto_trf_superior FROM tb_assunto_trf avo WHERE avo.id_assunto_trf =
 			(SELECT pai.id_assunto_trf_superior FROM tb_assunto_trf pai WHERE pai.id_assunto_trf = (SELECT aa.id_assunto_trf_superior FROM pje.tb_assunto_trf aa WHERE id_assunto_trf = b.id_assunto_trf))))
 		WHEN b.nivel = '5' THEN
-			(SELECT tataravo.cd_assunto_trf::text FROM tb_assunto_trf tataravo WHERE tataravo.id_assunto_trf =
+			(SELECT tataravo.cd_assunto_trf FROM tb_assunto_trf tataravo WHERE tataravo.id_assunto_trf =
 			(SELECT bisavo.id_assunto_trf_superior FROM tb_assunto_trf bisavo WHERE bisavo.id_assunto_trf =
 			(SELECT avo.id_assunto_trf_superior FROM tb_assunto_trf avo WHERE avo.id_assunto_trf =
 			(SELECT pai.id_assunto_trf_superior FROM tb_assunto_trf pai WHERE pai.id_assunto_trf = (SELECT aa.id_assunto_trf_superior FROM pje.tb_assunto_trf aa WHERE id_assunto_trf = b.id_assunto_trf)))))
-	ELSE b.cd_assunto_trf::text END  as cd_assunto_nivel_1,
+	ELSE b.cd_assunto_trf END  as cd_assunto_nivel_1,
 CASE
-		WHEN b.nivel = '1' THEN  ''::text
+		WHEN b.nivel = '1' THEN  ''
 		WHEN b.nivel = '3' THEN
-			(SELECT pai.cd_assunto_trf::text FROM tb_assunto_trf pai WHERE pai.id_assunto_trf = (SELECT aa.id_assunto_trf_superior FROM pje.tb_assunto_trf aa WHERE id_assunto_trf = b.id_assunto_trf))
+			(SELECT pai.cd_assunto_trf FROM tb_assunto_trf pai WHERE pai.id_assunto_trf = (SELECT aa.id_assunto_trf_superior FROM pje.tb_assunto_trf aa WHERE id_assunto_trf = b.id_assunto_trf))
 		WHEN b.nivel = '4' THEN
-			(SELECT avo.cd_assunto_trf::text FROM tb_assunto_trf avo WHERE avo.id_assunto_trf =
+			(SELECT avo.cd_assunto_trf FROM tb_assunto_trf avo WHERE avo.id_assunto_trf =
 			(SELECT pai.id_assunto_trf_superior FROM tb_assunto_trf pai WHERE pai.id_assunto_trf = (SELECT aa.id_assunto_trf_superior FROM pje.tb_assunto_trf aa WHERE id_assunto_trf = b.id_assunto_trf)))
 		WHEN b.nivel = '5' THEN
-			(SELECT bisavo.cd_assunto_trf::text FROM tb_assunto_trf bisavo WHERE bisavo.id_assunto_trf =
+			(SELECT bisavo.cd_assunto_trf FROM tb_assunto_trf bisavo WHERE bisavo.id_assunto_trf =
 			(SELECT avo.id_assunto_trf_superior FROM tb_assunto_trf avo WHERE avo.id_assunto_trf =
 			(SELECT pai.id_assunto_trf_superior FROM tb_assunto_trf pai WHERE pai.id_assunto_trf = (SELECT aa.id_assunto_trf_superior FROM pje.tb_assunto_trf aa WHERE id_assunto_trf = b.id_assunto_trf))))
-	ELSE b.cd_assunto_trf::text END  as cd_assunto_nivel_2,
+	ELSE b.cd_assunto_trf END  as cd_assunto_nivel_2,
 CASE
 		WHEN b.nivel = '1' THEN  ''
 		WHEN b.nivel = '2' THEN  ''
 		WHEN b.nivel = '4' THEN
-			(SELECT pai.cd_assunto_trf::text FROM tb_assunto_trf pai WHERE pai.id_assunto_trf = (SELECT aa.id_assunto_trf_superior FROM pje.tb_assunto_trf aa WHERE id_assunto_trf = b.id_assunto_trf))
+			(SELECT pai.cd_assunto_trf FROM tb_assunto_trf pai WHERE pai.id_assunto_trf = (SELECT aa.id_assunto_trf_superior FROM pje.tb_assunto_trf aa WHERE id_assunto_trf = b.id_assunto_trf))
 		WHEN b.nivel = '5' THEN
-			(SELECT avo.cd_assunto_trf::text FROM tb_assunto_trf avo WHERE avo.id_assunto_trf =
+			(SELECT avo.cd_assunto_trf FROM tb_assunto_trf avo WHERE avo.id_assunto_trf =
 			(SELECT pai.id_assunto_trf_superior FROM tb_assunto_trf pai WHERE pai.id_assunto_trf = (SELECT aa.id_assunto_trf_superior FROM pje.tb_assunto_trf aa WHERE id_assunto_trf = b.id_assunto_trf)))
-	ELSE b.cd_assunto_trf::text END  as cd_assunto_nivel_3,
+	ELSE b.cd_assunto_trf END  as cd_assunto_nivel_3,
 CASE
 		WHEN b.nivel = '1' THEN  ''
 		WHEN b.nivel = '2' THEN  ''
 		WHEN b.nivel = '3' THEN  ''
 		WHEN b.nivel = '5' THEN
-			(SELECT pai.cd_assunto_trf::text FROM tb_assunto_trf pai WHERE pai.id_assunto_trf = (SELECT aa.id_assunto_trf_superior FROM pje.tb_assunto_trf aa WHERE id_assunto_trf = b.id_assunto_trf))
-	ELSE b.cd_assunto_trf::text END  as cd_assunto_nivel_4,
+			(SELECT pai.cd_assunto_trf FROM tb_assunto_trf pai WHERE pai.id_assunto_trf = (SELECT aa.id_assunto_trf_superior FROM pje.tb_assunto_trf aa WHERE id_assunto_trf = b.id_assunto_trf))
+	ELSE b.cd_assunto_trf END  as cd_assunto_nivel_4,
 CASE
-		WHEN b.nivel = '1' THEN  ''::text
-		WHEN b.nivel = '2' THEN  ''::text
-		WHEN b.nivel = '3' THEN  ''::text
-		WHEN b.nivel = '4' THEN  ''::text
-	ELSE b.cd_assunto_trf::text END  as cd_assunto_nivel_5
+		WHEN b.nivel = '1' THEN  ''
+		WHEN b.nivel = '2' THEN  ''
+		WHEN b.nivel = '3' THEN  ''
+		WHEN b.nivel = '4' THEN  ''
+	ELSE b.cd_assunto_trf END  as cd_assunto_nivel_5
 FROM (
 SELECT a.*,
-		CASE WHEN a.cd_assunto_trf in ('9985','899','864','6191','8826') THEN '1'::text
+		CASE WHEN a.cd_assunto_trf in ('9985','899','864','6191','8826') THEN '1'
 		WHEN a.cd_assunto_trf in ('10186','10186','9997','10370','10421','10645','10394','10088','10409','9986','10385','10954','10219','','7947','7681','10431','55054','2622','55006','7644','1654','55336','55341','55077','1695','1658','2662',
 		'7628','10568','2581','2620','2567','55218','1937','1397','55078','6197','9565','6213','6218','6202','6215','6212','8893','8938','8828','9148','9192','8875','11781','8883','8842','55230','8960','9045','55301',
-		'55581','55596','55619') THEN '2'::text
+		'55581','55596','55619') THEN '2'
 		WHEN a.cd_assunto_trf in ('10187','10894','10015','10011','10022','10009','9998','10020','10382','10379','10381','10384','10377','10380','10376','10378','10374','10372','10373','10383','10375','10371','10423','10430','10429','10422','10428','10426','10425','10424','10427','10889','10646','10402','10395',
 		'10089','10097','10411','10410','11848','9988','11847','11845','11846','11849','11842','11843','10587','10393','10392','10388','10387','10386','10391','10389','10390','10958','10955','10956','10957','10254','10695','10287','10258','10250','10279','10313','10220','10288','10276',
 		'4701','5632','7690','7694','9580','7691','7688','55055','55056','2624','55010','55021','5276','5277','7645','5278','55024','5279','5280','55031','55032','5281','55035','55036','55037','5288','5282','55039','55322','55040','55041','5284','55053','55043','55044','5286','5287','5289','5290',
@@ -66,7 +67,7 @@ SELECT a.*,
 		'55277','9518','10683','55639','55459','9419','10880','9180','9414','9450','55462','9453','9160','10686','9166','9178','55281','10670','10671','10672','55470','10573','55471','9189','10673','9484','9149','9532','55288','9524','9196','55474','55475','55479','11786','11783','11785','11782',
 		'11784','8884','8888','8843','9493','9258','8859','8866','8868','8873','9494','8867','8874','55232','55234','55235','8865','55237','55498','55233','55499','55236','8961','8986','55503','8990','9024','55296','9026','9098','9047','55518','9050','55537','55538','10666','55299','55298','10738',
 		'9060','55297','55546','55547','55554','55556','55559','55560','55308','55304','55310','55307','55566','55567','55309','55303','55571','55305','55574','55302','55311','55578','55579','55306','55582','55583','55588','55589','55590','55591','55592','55593','55594','55595','55597',
-		'55604','55610','55620','55622','55627','55634') THEN '3'::text
+		'55604','55610','55620','55622','55627','55634') THEN '3'
 		WHEN a.cd_assunto_trf in ('10189','10191','10190','10192','10675','10193','10188','55000','55001','10928','55313','10019','10012','10013','10014','10025','10024','10023','10006','10396','10399','10400','10096','11870','10098','10099','10100','10101','10256','10878','10255','10257','10698','10273','10272',
 		'10270','10267','10268','10259','10271','10262','10274','10264','10265','10260','10275','10261','10269','10266','10263','10252','10251','10253','10281','10280','10283','10282','10946','10225','10231','10227','10234','10223','10222','10238','10241','10235','10881','10239','10693',
 		'10240','10236','10237','10224','10233','10230','10226','10229','10232','10228','10662','10294','10638','10730','10293','10303','10291','10292','10309','10308','10302','10244','10245','10304','10248','10246','10247','10306','10300','10296','10298','10301','10290','10295','10310',
@@ -83,18 +84,18 @@ SELECT a.*,
 		'55513','55514','55515','55516','55517','55519','55523','55524','55525','55529','55530','55539','55540','55541','55542','55543','55544','55545','10669','55548','55549','55552','55553','55555','55557','55561','55562','55563','55564','55565','55568','55569','55570','55572','55573',
 		'55637','55638','55575','55576','55580','55584','55585','55586','55587','55598','55599','55600','55601','55602','55603','55605','55606','55607','55608','55609','55611','55612','55613','55614','55615','55616','55617','55618','55621','55623','55624','55625','55626','55628','55632',
 		'55635','55636')
-		 THEN '4'::text
+		 THEN '4'
 		WHEN a.cd_assunto_trf in ('10700','10701','10875','10893','10883','10884','10699','55016','55318','55319','55027','55028','55061','55062','55075','55331','55332','55333','55334','55335','55076','55350','55351','55110','55107','55103',
 		'55130','55131','55135','55390','55391','55392','55134','55393','55136','55140','55138','55394','55395','55139','55191','55409','55410','55411','55412','55208','55413','55414','55426','55429','55430','55431',
 		'55247','55435','55441','55442','55443','55444','55445','55446','55447','55448','55449','55450','55451','55452','55453','55454','55455','55272','55274','55275','55273','55461','55466','55469','55473','55477',
 		'55478','55228','55493','55494','55495','55496','55497','55505','55509','55510','55511','55512','55520','55521','55522','55526','55527','55528','55531','55532','55533','55534','55535','55536','55550','55551',
-		'55558','55577','55629','55630','55631','55633') THEN '5'::text
-		ELSE 'Nível não identificado'::text END AS nivel
+		'55558','55577','55629','55630','55631','55633') THEN '5'
+		ELSE 'Nível não identificado' END AS nivel
 	FROM tb_assunto_trf a
 	WHERE in_ativo = 'S'
 ) AS b) ,
 processos_retificados as (
-    select distinct id_processo_trf::int from pje.tb_processo_assunto
+    select distinct id_processo_trf from pje.tb_processo_assunto
     where id_processo_assunto in (select ds_id_entidade::int from tb_log_fdw where ds_entidade ilike '%ProcessoAssunto%'
 
     )
