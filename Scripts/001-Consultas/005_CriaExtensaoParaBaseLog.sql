@@ -1,8 +1,9 @@
 DROP FOREIGN TABLE IF EXISTS tb_log_fdw;
 DROP USER MAPPING IF EXISTS FOR bugfix SERVER foreign_server;
 DROP SERVER IF EXISTS foreign_server;
-/*DROP EXTENSION IF EXISTS postgres_fdw;
-CREATE EXTENSION postgres_fdw;*/
+DROP EXTENSION IF EXISTS postgres_fdw;
+
+CREATE EXTENSION postgres_fdw;
 
 CREATE SERVER foreign_server
         FOREIGN DATA WRAPPER postgres_fdw

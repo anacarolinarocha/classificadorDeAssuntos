@@ -46,6 +46,8 @@ df_trt.columns
 df_trt = df_trt.drop(columns=['Unnamed: 0', 'Unnamed: 0.1'])
 df_trt = df_trt.drop(columns=['Unnamed: 0'])
 df_trt.columns
+df_trt['in_selecionando_para_amostra']='N'
+df_trt_csv['sigla_trt'] = "TRT"+sigla_trt;
 df_trt.to_csv(path_base_dados_originais + 'listaDocumentosNaoSigilosos_MultiLabel_TRT' + sigla_trt + '_2G_2010-2019.csv',sep=',', quoting=csv.QUOTE_ALL)
 #----------------------------------------------------------------------------------------------------------------------
 #Processando texto
