@@ -12,6 +12,7 @@ import pandas as pd
 from datetime import timedelta
 import lxml
 from bs4 import BeautifulSoup
+import warnings
 
 # -----------------------------------------------------------------------------------------------------
 # Setup
@@ -31,14 +32,24 @@ def removeHTML(texto):
     """
     return BeautifulSoup(texto, 'lxml').get_text(strip=True)
 
+
+#----------------------------------------------------------------------------------------------------------------------
+# Dropa coluna de HTML
+#----------------------------------------------------------------------------------------------------------------------
+s#igla_trt='18'
+nome_arquivo= path_base_dados_retificados_processados + 'listaDocumentosNaoSigilososRetificadosProcessados_MultiClasse_TRT' + sigla_trt + '_2G_2010-2019.csv'
+df_trt = pd.read_csv(nome_arquivo, sep='#', quoting=csv.QUOTE_ALL)
+df_trt = df_trt.drop(columns=['ds_modelo_documento'])
+df_trt.to_csv(nome_arquivo,sep='#', quoting=csv.QUOTE_ALL)
 #----------------------------------------------------------------------------------------------------------------------
 # Organiza colunas que ficaram com o nome errado....
 #----------------------------------------------------------------------------------------------------------------------
-sigla_trt='01'
+#sigla_trt='22'
 nome_arquivo= path_base_dados_originais + 'listaDocumentosNaoSigilosos_MultiLabel_TRT' + sigla_trt + '_2G_2010-2019.csv'
 df_trt = pd.read_csv(nome_arquivo, sep=',', quoting=csv.QUOTE_ALL)
 df_trt.shape
 df_trt.columns
+df_trt = df_trt.drop(columns=['ds_modelo_documento'])
 df_trt = df_trt.set_axis([ 'Unnamed: 0','ds_orgao_julgador', 'ds_orgao_julgador_colegiado', 'nr_processo', 'id_processo_documento', 'codigo_documento', 'dt_juntada', 'ds_modelo_documento', 'cd_assunto_nivel_3', 'in_processo_retificado'], axis=1, inplace=False)
 df_trt = df_trt.dropna(subset=['Unnamed: 0'])
 df_trt.shape
@@ -48,20 +59,22 @@ df_trt = df_trt.drop(columns=['Unnamed: 0'])
 df_trt.columns
 df_trt['in_selecionando_para_amostra']='N'
 df_trt_csv['sigla_trt'] = "TRT"+sigla_trt;
-df_trt.to_csv(path_base_dados_originais + 'listaDocumentosNaoSigilosos_MultiLabel_TRT' + sigla_trt + '_2G_2010-2019.csv',sep=',', quoting=csv.QUOTE_ALL)
+df_trt.to_csv(nome_arquivo,sep=',', quoting=csv.QUOTE_ALL)
 #----------------------------------------------------------------------------------------------------------------------
 #Processando texto
 #----------------------------------------------------------------------------------------------------------------------
 
 def processaTextosRegional(regionais):
     for  sigla_trt in regionais:
-
+        #sigla_trt='09'
         nome_arquivo= path_base_dados_originais + 'listaDocumentosNaoSigilosos_MultiLabel_TRT' + sigla_trt + '_2G_2010-2019.csv'
         df_trt = pd.read_csv(nome_arquivo, sep=',', quoting=csv.QUOTE_ALL)
+        #df_trt.to_csv(nome_arquivo, sep='#', quoting=csv.QUOTE_ALL)
         df_trt = df_trt[df_trt['in_processo_retificado'] == 'S']
-        df_trt.shape
+        df_trt.drop(df_trt[df_trt['cd_assunto_nivel_3'] == str('cd_assunto_nivel_3')].index, inplace=True)
+        # //TODO: fazer a stemmização
         #pool = mp.Pool(mp.cpu_count())
-        pool = mp.Pool(7)
+        pool = mp.Pool(4)
         start_time = time.time()
         df_trt = df_trt.dropna(subset=['ds_modelo_documento'])
         df_trt['texto_processado'] = pool.map(removeHTML, [row for row in df_trt['ds_modelo_documento']])
@@ -69,10 +82,10 @@ def processaTextosRegional(regionais):
         total_time = time.time() - start_time
         print('Tempo para processamento do texto:' + str(timedelta(seconds=total_time)))
         df_trt.shape
-
+        df_trt = df_trt.drop(columns=['ds_modelo_documento'])
         df_trt.to_csv(path_base_dados_retificados_processados + 'listaDocumentosNaoSigilososRetificadosProcessados_MultiClasse_TRT' + sigla_trt + '_2G_2010-2019.csv', sep='#', quoting=csv.QUOTE_ALL)
 
 
         del(df_trt)
 
-processaTextosRegional(['21'])
+processaTextosRegional(['01'])

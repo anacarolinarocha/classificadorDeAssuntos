@@ -40,11 +40,11 @@ def recuperaDadosRegional(regionais):
         porta = '5' + sigla_trt + '2'
         try:
             # Cria conexao com banco
-            sql_fdw = sql_fdw_original.format(ipbugfix, porta, dbname_2g_log, userbugfix, senhabugfix)
+            #sql_fdw = sql_fdw_original.format(ipbugfix, porta, dbname_2g_log, userbugfix, senhabugfix)
             conn = psycopg2.connect(dbname=dbname_2g, user=userbugfix, password=senhabugfix, host=ipbugfix, port=porta)
-            cur = conn.cursor()
-            cur.execute(sql_fdw)
-            conn.commit()
+            #cur = conn.cursor()
+            #cur.execute(sql_fdw)
+            #conn.commit()
 
             if os.path.isfile('/mnt/04E61847E6183AFE/classificadorDeAssuntos/Dados/naoPublicavel/DocumenosTRTs/listaDocumentosNaoSigilosos_MultiLabel_TRT' + sigla_trt  + '_2G_2010-2019.csv'):
                 os.remove('/mnt/04E61847E6183AFE/classificadorDeAssuntos/Dados/naoPublicavel/DocumenosTRTs/listaDocumentosNaoSigilosos_MultiLabel_TRT' + sigla_trt  + '_2G_2010-2019.csv')
@@ -69,5 +69,5 @@ def recuperaDadosRegional(regionais):
             print("\033[91mNão foi possível se conectar na base do  TRT " + sigla_trt + "\033[0m")
             continue;
 
-recuperaDadosRegional(['19','05','08','12'])
+recuperaDadosRegional(['19','08','12','05'])
 
