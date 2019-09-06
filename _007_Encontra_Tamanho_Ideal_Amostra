@@ -32,7 +32,7 @@ def mede_fscore(qt_exemplos,listaAssuntos,listaRegionais):
     nome_classificador="Multinomial_Naive_Bayes"
 
     n_estimators = 5
-    max_samples=round(x_tfidf_train.shape[0] * 0.7)
+    max_samples=round(x_tfidf_train.shape[0] * 0.5)
     start_time = time.time()
     clf = OneVsRestClassifier(BaggingClassifier(SVC(kernel='linear', probability=True, class_weight='balanced'), max_samples=max_samples, n_estimators=n_estimators, n_jobs=-1))
     #clf_nb_bagged = OneVsRestClassifier(BaggingClassifier(MultinomialNB(), max_samples=max_samples, n_estimators=n_estimators, n_jobs=-1))
@@ -59,17 +59,19 @@ path='/home/anarocha/myGit/classificadorDeAssuntos/Resultados/EXP2_MedindoTamanh
 if not os.path.exists(path):
     os.makedirs(path)
 
-listaRegionais = ['21','18','22']
+listaRegionais = ['21','18','22','20','09']
 listaAssuntos=[2546,2086,1855]
 listaResultados = []
-for qtdElementosPorAssunto in range(round(6000/len(listaRegionais)), 12001, round(1800/len(listaRegionais))):
+for qtdElementosPorAssunto in range(round(10000/len(listaRegionais)), 150000, round(10000/len(listaRegionais))):
     listaResultados.append(mede_fscore(qtdElementosPorAssunto,listaAssuntos,listaRegionais))
 plt.plot(*zip(*listaResultados))
-plt.title("SVM")
-plt.savefig("{0}{1}.png".format(path, str("SVM").replace(' ', '')))
+plt.title("SVM 3")
+plt.savefig("{0}{1}.png".format(path, str("SVM 3").replace(' ', '')))
 plt.show()
 
 
-
-
+def getKey(item):
+    return item[0]
+teste = sorted(listaResultados, key=getKey)
+listaResultados = teste
 listaResultadosSVMBackup = listaResultados
