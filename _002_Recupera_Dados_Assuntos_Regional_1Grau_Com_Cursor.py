@@ -35,6 +35,7 @@ def recuperaDadosRegional(regionais):
 
         try:
             conn = psycopg2.connect(dbname=dbname_1g, user=userbugfix, password=senhabugfix, host=ipbugfix, port=porta)
+            # conn = psycopg2.connect(dbname='pje_1grau_consulta', user=userbugfix, password=senhabugfix, host=ipbugfix, port=porta)
 
             if os.path.isfile(nomeArquivo):
                 os.remove(nomeArquivo)
@@ -61,7 +62,7 @@ def recuperaDadosRegional(regionais):
             print(e)
             continue;
 
-for i in range (1,5):
-    recuperaDadosRegional([("{:02d}".format(i))])
-recuperaDadosRegional(['18','19','20'])
+# for i in range (15,25):
+#     recuperaDadosRegional([("{:02d}".format(i))])
+recuperaDadosRegional(['20']) # 11, 22
 
