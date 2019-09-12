@@ -64,5 +64,5 @@ def recuperaDadosRegional(regionais):
 
 # for i in range (15,25):
 #     recuperaDadosRegional([("{:02d}".format(i))])
-recuperaDadosRegional(['20']) # 11, 22
+recuperaDadosRegional(['22']) # 11, 22
 

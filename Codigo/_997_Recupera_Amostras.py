@@ -19,12 +19,19 @@ import warnings
 # -----------------------------------------------------------------------------------------------------
 # Setup
 # -----------------------------------------------------------------------------------------------------
-path_base_dados_retificados_processados= '/mnt/04E61847E6183AFE/classificadorDeAssuntos/Dados/naoPublicavel/DocumenosTRTsRetificadosProcessados/'
+
 # -----------------------------------------------------------------------------------------------------
-# Função que recuperar amostra estratificada pelo codigo de assunto dentre todos os codigos existentes no dataset
+# Função que recuperar amostra estratificada pelo codigo de assunto dentre todos os codigos existentes no dataset. Nao faz bootstrapping..
+#----------------------------------------------------------------------------------------------------------------------
 def stratified_sample_df(df, col, n_samples):
-    n = min(n_samples, df[col].value_counts().min())
-    df_ = df.groupby(col).apply(lambda x: x.sample(n))
+    # df = df_trt_filtrado
+    # col = 'cd_assunto_nivel_3'
+    # n_samples = 100000
+    # len(df_trt_filtrado)
+    # df_trt_filtrado.shape[0]
+    df_ = df.groupby(col).apply(lambda x: x.sample(min(x.shape[0], n_samples)))
+    # df_ = df.groupby(col).apply(lambda x: x.sample(print(min(x.shape[0],n_samples))))
+    # df_ = df.groupby(col).apply(lambda x: x.sample(print(min(x.head(1)[col].iloc[0], n_samples))))
     df_.index = df_.index.droplevel(0)
     return df_
 
@@ -53,6 +60,7 @@ def mostra_grafico_amostra(df):
 #             sep='#', quoting=csv.QUOTE_ALL)
 
 def recupera_n_amostras_por_assunto_por_regional(regionais, assuntos, nroElementos, percentualTeste):
+
     """
     Função que, dada uma lista de regionais, uma lista de assuntos, e definida a a quantidade de amostras de cada item,
     busca o arquivo com os documentos do regional informado e retira o número de elementos de dada assunto de cada regional.
@@ -66,22 +74,24 @@ def recupera_n_amostras_por_assunto_por_regional(regionais, assuntos, nroElement
     //TODO: implementar bootstrap para fazer oversamplig
     :return:
     """
+    path = '/media/DATA/classificadorDeAssuntos/Dados/naoPublicavel/ConferenciaDeAssuntos/OK/'
     df_amostras_trts = pd.DataFrame()
     for  sigla_trt in regionais:
         # sigla_trt='22'
         # assuntos = [2546, 2086, 1855]
         # nroElementos=10
         # percentualTeste=0.3
-        nome_arquivo= path_base_dados_retificados_processados + 'listaDocumentosNaoSigilososRetificadosProcessados_MultiClasse_TRT' + sigla_trt + '_2G_2010-2019.csv'
+        print('Buscando dados para o TRT  '+ sigla_trt)
+        nome_arquivo = path + 'TRT_' + sigla_trt + '_2G_2010-2019_documentosSelecionadosProcessados.csv'
+        df_trt_csv = pd.DataFrame()
         df_trt_csv = pd.read_csv(nome_arquivo, sep='#', quoting=csv.QUOTE_ALL)
         df_trt_csv.loc[:,'in_selecionando_para_amostra']='N'
         df_trt_csv.loc[:,'sigla_trt'] = "TRT"+sigla_trt;
 
         #Removendo lixo
-        cols = [c for c in df_trt_csv.columns if c.lower()[:7] != 'unnamed']
-        df_trt_csv = df_trt_csv[cols]
-        df_trt_csv = df_trt_csv.dropna()
-        df_trt_csv.drop(df_trt_csv[df_trt_csv['cd_assunto_nivel_3'] == 'cd_assunto_nivel_3'].index, inplace=True)
+        # cols = [c for c in df_trt_csv.columns if c.lower()[:7] != 'unnamed']
+        # df_trt_csv = df_trt_csv[cols]
+        # df_trt_csv.drop(df_trt_csv[df_trt_csv['cd_assunto_nivel_3'] == 'cd_assunto_nivel_3'].index, inplace=True)
 
         #Removendo dados que não serao necessarios nessa iteracao
         df_trt_filtrado = df_trt_csv[df_trt_csv.in_selecionando_para_amostra == 'N']
@@ -91,8 +101,8 @@ def recupera_n_amostras_por_assunto_por_regional(regionais, assuntos, nroElement
         del(df_trt_csv)
         #Estratificando
         df_amostra = stratified_sample_df(df_trt_filtrado,'cd_assunto_nivel_3',nroElementos)
-        cols = [c for c in df_amostra.columns if c.lower()[:7] != 'unnamed']
-        df_amostra = df_amostra[cols]
+        # cols = [c for c in df_amostra.columns if c.lower()[:7] != 'unnamed']
+        # df_amostra = df_amostra[cols]
 
         #Marcado treinamento e teste
         train, test = train_test_split(df_amostra, test_size=percentualTeste, stratify=df_amostra['cd_assunto_nivel_3'])
@@ -105,21 +115,17 @@ def recupera_n_amostras_por_assunto_por_regional(regionais, assuntos, nroElement
         test.loc[:,'in_selecionando_para_amostra'] ='Teste'
         # df_trt_csv.loc[df_trt_csv.index.isin(test.index), 'in_selecionando_para_amostra'] = 'Teste'
 
-
         df_amostras_trts = df_amostras_trts.append(train)
         df_amostras_trts = df_amostras_trts.append(test)
 
+
         warnings.filterwarnings("default")
-        # df_trt_csv.to_csv(
-        #     path_base_dados_retificados_processados + 'listaDocumentosNaoSigilososRetificadosProcessados_MultiClasse_TRT' + sigla_trt + '_2G_2010-2019.csv',
-        #     sep='#', quoting=csv.QUOTE_ALL)
+        # df_trt_csv.to_csv(nome_arquivo,sep='#', quoting=csv.QUOTE_ALL)
 
     return df_amostras_trts
 # warnings.filterwarnings("default")
 
 #listaAssuntos=['2546','2086','1855','2594','2458','2029','2140','2478','2704','2021','2426','2656','8808','1844','1663','2666','2506','55220','2055','1806','2139','1888','2435','2215','5280','2554','2583','55170','2019','2117','1661','1904','2540','55345']
-listaAssuntos=[2546,2086,1855]
-df_amostra_final = recupera_n_amostras_por_assunto_por_regional(['22','21','18'],listaAssuntos,50,0.3)
-mostra_grafico_amostra(df_amostra_final)
-# pd.DataFrame.from_dict(Counter(df_amostra_final['in_selecionando_para_amostra']), orient='index').sort_values(by=[0], ascending=False).plot(kind='bar')
-# plt.show()
+listaAssuntos=[2546,2086]
+df_amostra_final = recupera_n_amostras_por_assunto_por_regional(['22','21','18','09','12','23'],listaAssuntos,50,0.3)
+# mostra_grafico_amostra(df_amostra_final)

@@ -1,5 +1,3 @@
-from _005_Recupera_Amostras import *
-from _006_Extrai_Features import *
 from sklearn.ensemble import BaggingClassifier
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.metrics import precision_recall_fscore_support as score
@@ -9,9 +7,16 @@ from sklearn.svm import SVC
 from datetime import timedelta
 import time
 import matplotlib.pyplot as plt
+sys.path.insert(1, '/home/anarocha/myGit/classificadorDeAssuntos/Codigo')
+from _997_Recupera_Amostras import *
+from _998_Extrai_Features import *
+
 #Recupera elementos
 
-def mede_fscore(qt_exemplos,listaAssuntos,listaRegionais):
+def mede_fscore_NB(qt_exemplos,listaAssuntos,listaRegionais):
+    # qt_exemplos=10
+    # listaAssuntos = [2546,2086]
+    # listaRegionais = ['22','21']
 
     df_amostra_final = recupera_n_amostras_por_assunto_por_regional(listaRegionais,listaAssuntos,qt_exemplos,0.3)
     mostra_grafico_amostra(df_amostra_final)
@@ -34,8 +39,8 @@ def mede_fscore(qt_exemplos,listaAssuntos,listaRegionais):
     n_estimators = 5
     max_samples=round(x_tfidf_train.shape[0] * 0.5)
     start_time = time.time()
-    clf = OneVsRestClassifier(BaggingClassifier(SVC(kernel='linear', probability=True, class_weight='balanced'), max_samples=max_samples, n_estimators=n_estimators, n_jobs=-1))
-    #clf_nb_bagged = OneVsRestClassifier(BaggingClassifier(MultinomialNB(), max_samples=max_samples, n_estimators=n_estimators, n_jobs=-1))
+    # clf = OneVsRestClassifier(BaggingClassifier(SVC(kernel='linear', probability=True, class_weight='balanced'), max_samples=max_samples, n_estimators=n_estimators, n_jobs=-1))
+    clf_nb_bagged = OneVsRestClassifier(BaggingClassifier(MultinomialNB(), max_samples=max_samples, n_estimators=n_estimators, n_jobs=-1))
     clf.fit(x_tfidf_train, y_train)
     total_time = time.time() - start_time
     print("Tempo para a criação do modelo Bagging Naive Bayes Multinomial para " + str(tamanhoAmostra) + " elementos: ", str(timedelta(seconds=total_time)))
@@ -55,23 +60,23 @@ def mede_fscore(qt_exemplos,listaAssuntos,listaRegionais):
     return tamanhoAmostra, microFscore
 
 
-path='/home/anarocha/myGit/classificadorDeAssuntos/Resultados/EXP2_MedindoTamanhoDaAmostra/'
+path='/home/anarocha/myGit/classificadorDeAssuntos/Resultados/EXP3_MedindoTamanhoDaAmostra/'
 if not os.path.exists(path):
     os.makedirs(path)
 
-listaRegionais = ['21','18','22','20','09']
-listaAssuntos=[2546,2086,1855]
+listaRegionais = ['22','21','18','09','12','23']
+listaAssuntos=[2546,2086,1855,2594,2458,2029,2140]
 listaResultados = []
-for qtdElementosPorAssunto in range(round(10000/len(listaRegionais)), 150000, round(10000/len(listaRegionais))):
-    listaResultados.append(mede_fscore(qtdElementosPorAssunto,listaAssuntos,listaRegionais))
+for qtdElementosPorAssunto in range(round(10000/len(listaRegionais)), 5000, round(10000/len(listaRegionais))):
+    listaResultados.append(mede_fscore_NB(qtdElementosPorAssunto,listaAssuntos,listaRegionais))
 plt.plot(*zip(*listaResultados))
-plt.title("SVM 3")
-plt.savefig("{0}{1}.png".format(path, str("SVM 3").replace(' ', '')))
+plt.title("NB")
+plt.savefig("{0}{1}.png".format(path, str("NB").replace(' ', '')))
 plt.show()
 
-
-def getKey(item):
-    return item[0]
-teste = sorted(listaResultados, key=getKey)
-listaResultados = teste
-listaResultadosSVMBackup = listaResultados
+#
+# def getKey(item):
+#     return item[0]
+# teste = sorted(listaResultados, key=getKey)
+# listaResultados = teste
+# listaResultadosSVMBackup = listaResultados

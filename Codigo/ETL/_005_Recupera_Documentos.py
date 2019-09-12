@@ -11,6 +11,10 @@ sys.path.insert(1, '/home/anarocha/Documents/credentials')
 from credentials import *
 import os
 import csv
+
+sys.path.insert(1, '/home/anarocha/myGit/classificadorDeAssuntos/Codigo/ETL')
+from _004_Cria_Tabela_Postgres_From_Dataframe import *
+
 path = '/media/DATA/classificadorDeAssuntos/Dados/naoPublicavel/ConferenciaDeAssuntos/OK/'
 
 sql_original = """WITH vs_nivel_assunto as(SELECT b.*,
@@ -137,11 +141,13 @@ and doc.id_tipo_processo_documento = (select id_tipo_processo_documento from tb_
 and pa.in_assunto_principal = 'S' /*escolhi so o assunto principal*/
 and vs.cd_assunto_nivel_3 in ('2546','2086','1855','2594','2458','2029','2140','2478','2704','2021','2426','2656','8808','1844','1663','2666','2506','55220','2055','1806','2139','1888','2435','2215','5280','2554','2583','55170','2019','2117','1661','1904','2540','55345')
 """
+sql_original = sql_original.replace('\n', ' ')
+sql_original = sql_original.replace('\t', ' ')
 
 def recuperaDocumentos(regionais):
 
     for  sigla_trt in regionais:
-        # sigla_trt='08'
+        # sigla_trt='07'
         print("----------------------------------------------------------------------------")
         print('Recuperando os documentos selecionados para o TRT ' + sigla_trt)
         porta = '5' + sigla_trt + '2'
@@ -151,39 +157,46 @@ def recuperaDocumentos(regionais):
 
         df_procs.shape
 
-
         try:
             # -----------------------------------------------------------------------------------------------------------------------
             # Cria tabela no banco de dados que contem apenas o numero dos processos selecionados
             # conn = psycopg2.connect(dbname=dbname_1g, user=userbugfix, password=senhabugfix, host=ipbugfix, port=porta)
             start_time = time.time()
-            engine = create_engine(
-                'postgresql://' + userbugfix + ':' + senhabugfix + '@' + ipbugfix + ':' + porta + '/' + dbname_2g)
-            df_procs.to_sql('tb_processos_selecionados', engine, schema='public')
+            print('Criando tabela public.tb_processos_selecionados')
+            to_pg(df_procs, 'tb_processos_selecionados', credentials['TRT' + sigla_trt + '-2G'])
             total_time = time.time() - start_time
             print('\nTempo para criar tabela: ' + str(timedelta(seconds=(total_time))))
             # -----------------------------------------------------------------------------------------------------------------------
             # Recupera os documentos
-
-            conn = psycopg2.connect(dbname=dbname_2g, user=userbugfix, password=senhabugfix, host=ipbugfix, port=porta)
+            # conn = psycopg2.connect(dbname=dbname_2g, user=userbugfix, password=senhabugfix, host=ipbugfix, port=porta)
+            conn = psycopg2.connect(dbname='pje_2grau_consulta', user=userbugfix, password=senhabugfix, host=ipbugfix, port=porta)
             start_time = time.time()
+
+            sql_count = """select max(id_processo_documento) from tb_processo_documento"""
+            total_registros = (psql.read_sql(sql_count, conn))
+            total_registros = total_registros['max'][0]
+            print(
+                'Encontrados ' + str(total_registros) + ' documentos no total na tabela tb_processo_documento do TRT ' + sigla_trt)
+
             if os.path.isfile(path + nome_arquivo_documentos_selecionados):
                 os.remove(path + nome_arquivo_documentos_selecionados)
-            chunk_size = 100
-            offset = 0
+            chunk_size = 50000
+            offset = 50000
             dfs=[]
             while True:
-            # for i in range(1,5):
-                sql = sql_original +"limit %d offset %d" % (chunk_size,offset)
+                # for i in range(1,5):
+                sql = sql_original + " and doc.id_processo_documento > %d and doc.id_processo_documento < %d  limit %d " % (offset-chunk_size,offset, chunk_size)
                 dfs.append(psql.read_sql(sql, conn))
                 if offset == 0 :
-                    print('Primeiros dados recuperados ...' + sql[-50:])
+                    print('Primeiros dados recuperados ...' + sql[-100:])
                     dfs[-1].to_csv(path + nome_arquivo_documentos_selecionados, mode='a', header=True, quoting=csv.QUOTE_ALL)
+                    a=dfs[-1]
                 else:
                     dfs[-1].to_csv(path + nome_arquivo_documentos_selecionados, mode='a', header=False, quoting=csv.QUOTE_ALL)
                 offset += chunk_size
-                if len(dfs[-1]) < chunk_size:
-                    print('Dados recuperados com sucesso.' )
+                if offset > total_registros + chunk_size:
+                    print('Ultimo sql executado ...' + sql[-100:])
+                    print('Dados recuperados com sucesso.')
                     break;
             total_time = time.time() - start_time
             print('\nTempo para recuperar dados: ' + str(timedelta(seconds=(total_time))))
@@ -191,7 +204,8 @@ def recuperaDocumentos(regionais):
             print("\033[91mNão foi possível se conectar na base do  TRT " + sigla_trt + "\033[0m")
             print(e)
             continue;
-for i in range (1,25):
-    recuperaDocumentos([("{:02d}".format(i))])
-# recuperaDocumentos(['08']) # 11, 22
+# for i in range (1,25):
+#     recuperaDocumentos([("{:02d}".format(i))])
+recuperaDocumentos(['20'])
 
+#'07','24',

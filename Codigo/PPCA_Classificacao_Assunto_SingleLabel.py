@@ -15,20 +15,16 @@ import sys
 import time
 import nltk
 import os
-from imblearn.over_sampling import RandomOverSampler
-from matplotlib import path
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import multilabel_confusion_matrix
 from sklearn.svm import SVC
 from sqlalchemy import create_engine
-from collections import Counter
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import RandomOverSampler
 import numpy as np
-import pandas as pd
 from datetime import timedelta
 from sklearn.metrics import precision_recall_fscore_support as score
-from funcoes_novas import *
+from Codigo.funcoes_novas import *
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.ensemble import BaggingClassifier
 
@@ -95,7 +91,7 @@ create foreign table tb_log_fdw (
         options (schema_name 'pje', table_name 'tb_log');
 """
 import sqlalchemy
-from sqlalchemy import create_engine
+
 df_mc = pd.read_sql_query(sqlalchemy.text(sql), engine)
 total_time = time.time() - start_time
 print('Tempo para recuperar documentos:' + str(timedelta(seconds=total_time)))
@@ -317,7 +313,6 @@ pickle.dump(clf_ovr, open(filename, 'wb'))
 
 # keep: https://www.anoreg.org.br/site/2019/06/10/cnj-inteligencia-artificial-sera-usada-para-verificar-qualidade-de-dados-processuais/
 
-import pandas_profiling
 df_mc_21.profile_report(style={'full_width':True})
 profile = df.profile_report(title='Pandas Profiling Report')
 profile.to_file(output_file="./profile.html")

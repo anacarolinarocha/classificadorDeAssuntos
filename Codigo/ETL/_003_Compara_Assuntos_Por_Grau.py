@@ -65,7 +65,7 @@ def cruzaAssuntos(regionais):
 
 # for i in range (12,15):
 #     cruzaAssuntos([("{:02d}".format(i))])
-cruzaAssuntos(['17','18','19','21','23','24','01','15','16','20','11']) # 11, 22
+cruzaAssuntos(['22']) # 11, 22
 
 # from joblib import Parallel, delayed
 # import multiprocessing
