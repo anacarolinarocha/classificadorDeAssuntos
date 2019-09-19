@@ -25,8 +25,9 @@ def cruzaAssuntos(regionais):
         df_2g['processo_2g'].value_counts()
 
         #-----------------------------------------------------------------------------------------------------------------------
-        #Seleciona apenas os processos que tenham mais de um assunto
+        #Seleciona apenas os processos que tenham mais de um assunto no segundo grau
         df_2g_mais_de_um_assunto = df_2g.groupby(['processo_2g'],as_index=False)[['cd_assunto_2g']].count()
+        #//TODO: verificar se ha embasamento legal para que eu remova de fato esses caras.... se nao eu estaria enviezando o dataset
         df_2g_mais_de_um_assunto = df_2g_mais_de_um_assunto[df_2g_mais_de_um_assunto['cd_assunto_2g']>1]
 
         i1 = df_2g.set_index('processo_2g').index
@@ -67,9 +68,3 @@ def cruzaAssuntos(regionais):
 #     cruzaAssuntos([("{:02d}".format(i))])
 cruzaAssuntos(['22']) # 11, 22
 
-# from joblib import Parallel, delayed
-# import multiprocessing
-#
-# num_cores = 4
-#
-# Parallel(n_jobs=num_cores)(delayed(cruzaAssuntos)([("{:02d}".format(i))]) for i in range (2,10))

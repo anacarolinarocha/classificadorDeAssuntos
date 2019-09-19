@@ -14,7 +14,7 @@ import lxml
 from bs4 import BeautifulSoup
 import warnings
 
-nltk.download('rslp')
+# nltk.download('rslp')
 stemmer = nltk.stem.RSLPStemmer()
 # -----------------------------------------------------------------------------------------------------
 # Setup
@@ -123,5 +123,5 @@ def processaTextosRegional(regionais):
         df_trt.to_csv(nome_arquivo_destino, sep='#', quoting=csv.QUOTE_ALL)
 
 # processaTextosRegional(['16','17'])
-for i in range (2,7):
-    processaTextosRegional([("{:02d}".format(i))])
+# for i in range (2,7):
+#     processaTextosRegional([("{:02d}".format(i))])

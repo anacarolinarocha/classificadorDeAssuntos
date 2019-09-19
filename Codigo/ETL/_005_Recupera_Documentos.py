@@ -136,8 +136,8 @@ inner join pje.tb_orgao_julgador oj on oj.id_orgao_julgador = ptrf.id_orgao_julg
 inner join pje.tb_orgao_julgador_colgiado ojc on ojc.id_orgao_julgador_colegiado = ptrf.id_orgao_julgador_colegiado
 where doc.in_documento_sigiloso = 'N' /*filtrei os sigilosos*/
 and doc.dt_juntada is not null /*filtrei os nao assinados*/
-and docbin.ds_extensao is null /*filtrei os PDFs*/
-and doc.id_tipo_processo_documento = (select id_tipo_processo_documento from tb_tipo_processo_documento where ds_tipo_processo_documento = 'Recurso Ordinário')
+and docbin.ds_extensao is null /*filtrei os HTMLs*/
+and doc.id_tipo_processo_documento = (select id_tipo_processo_documento from tb_tipo_processo_documento where ds_tipo_processo_documento = 'Recurso Ordinário') /*filtrei os ROs*/
 and pa.in_assunto_principal = 'S' /*escolhi so o assunto principal*/
 and vs.cd_assunto_nivel_3 in ('2546','2086','1855','2594','2458','2029','2140','2478','2704','2021','2426','2656','8808','1844','1663','2666','2506','55220','2055','1806','2139','1888','2435','2215','5280','2554','2583','55170','2019','2117','1661','1904','2540','55345')
 """
@@ -168,8 +168,8 @@ def recuperaDocumentos(regionais):
             print('\nTempo para criar tabela: ' + str(timedelta(seconds=(total_time))))
             # -----------------------------------------------------------------------------------------------------------------------
             # Recupera os documentos
-            # conn = psycopg2.connect(dbname=dbname_2g, user=userbugfix, password=senhabugfix, host=ipbugfix, port=porta)
-            conn = psycopg2.connect(dbname='pje_2grau_consulta', user=userbugfix, password=senhabugfix, host=ipbugfix, port=porta)
+            conn = psycopg2.connect(dbname=dbname_2g, user=userbugfix, password=senhabugfix, host=ipbugfix, port=porta)
+            # conn = psycopg2.connect(dbname='pje_2grau_consulta', user=userbugfix, password=senhabugfix, host=ipbugfix, port=porta)
             start_time = time.time()
 
             sql_count = """select max(id_processo_documento) from tb_processo_documento"""

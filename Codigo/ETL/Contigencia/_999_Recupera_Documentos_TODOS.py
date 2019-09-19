@@ -65,14 +65,14 @@ def recuperaDocumentos(regionais):
 
             if os.path.isfile(path + nome_arquivo_documentos_selecionados):
                 os.remove(path + nome_arquivo_documentos_selecionados)
-            chunk_size = 5000
-            offset = 5000
+            chunk_size = 1000
+            offset = 1000
             dfs=[]
             while True:
                 # for i in range(1,5):
                 sql = sql_original + " and doc.id_processo_documento > %d and doc.id_processo_documento < %d  limit %d " % (offset-chunk_size,offset, chunk_size)
                 dfs.append(psql.read_sql(sql, conn))
-                if offset == 5000 :
+                if offset == 1000 :
                     print('Primeiros dados recuperados ...' + sql[-100:])
                     dfs[-1].to_csv(path + nome_arquivo_documentos_selecionados, mode='a', header=True, quoting=csv.QUOTE_ALL)
                     a=dfs[-1]
@@ -89,7 +89,7 @@ def recuperaDocumentos(regionais):
             print("\033[91mNão foi possível se conectar na base do  TRT " + sigla_trt + "\033[0m")
             print(e)
             continue;
-for i in range (1,25):
+for i in range (3,25):
     recuperaDocumentos([("{:02d}".format(i))])
 # recuperaDocumentos(['07'])
 

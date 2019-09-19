@@ -221,6 +221,7 @@ def processa_texto(texto):
         textoProcessado = textoProcessado.split()
         textoProcessado = [palavra for palavra in textoProcessado if not palavra in stopwords]
         textoProcessado = [palavra for palavra in textoProcessado if len(palavra)>3]
+
         textoProcessado =  [stemmer.stem(palavra) for palavra in textoProcessado]
         return textoProcessado
 
