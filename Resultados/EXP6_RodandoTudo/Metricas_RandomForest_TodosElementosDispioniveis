@@ -1,0 +1,2 @@
+,tamanhoAmostra,microPrecision,microRecall,microFscore,accuracy,algoritmo
+0,210727,0.3960680700337675,0.24457837042661226,0.26645429951944666,0.24457837042661226,Random Forest

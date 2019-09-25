@@ -1,0 +1,132 @@
+,id_execucao,data,nome,feature_type,tempo_processamento,tamanho_conjunto_treinamento,accuracy,micro_precision,micro_recall,micro_fscore,macro_precision,macro_recall,macro_fscore,best_params_,best_estimator_,grid_scores_,confusion_matrix,num_estimators,max_samples
+0,b680e17,24/09/2019 11:43:46,Random Forest,TF-IDF,0:01:36.325866,147507,0.22166155208959473,0.4124651381337109,0.22166155208959473,0.23622778086982688,0.2495815719070865,0.2969256465309268,0.21091791540766458,,"OneVsRestClassifier(estimator=BalancedBaggingClassifier(base_estimator=RandomForestClassifier(bootstrap=True,
+                                                                                              class_weight=None,
+                                                                                              criterion='gini',
+                                                                                              max_depth=10,
+                                                                                              max_features='auto',
+                                                                                              max_leaf_nodes=None,
+                                                                                              min_impurity_decrease=0.0,
+                                                                                              min_impurity_split=None,
+                                                                                              min_samples_leaf=1,
+                                                                                              min_samples_split=2,
+                                                                                              min_weight_fraction_leaf=0.0,
+                                                                                              n_estimators=100,
+                                                                                              n_jobs=None,
+                                                                                              oob_score=False,
+                                                                                              random_state=0,
+                                                                                              verbose=0,
+                                                                                              warm_start=False),
+                                                        bootstrap=False,
+                                                        bootstrap_features=False,
+                                                        max_features=1.0,
+                                                        max_samples=88504,
+                                                        n_estimators=3,
+                                                        n_jobs=6,
+                                                        oob_score=False,
+                                                        random_state=None,
+                                                        ratio=None,
+                                                        replacement=False,
+                                                        sampling_strategy='auto',
+                                                        verbose=1,
+                                                        warm_start=False),
+                    n_jobs=4)",,"[[[55534  7128]
+  [  132   424]]
+
+ [[61342  1313]
+  [  388   175]]
+
+ [[60605  2110]
+  [  299   204]]
+
+ [[58926  3872]
+  [  318   102]]
+
+ [[52964  1107]
+  [ 8278   869]]
+
+ [[61303  1311]
+  [  469   135]]
+
+ [[61497   897]
+  [  741    83]]
+
+ [[62644   201]
+  [  309    64]]
+
+ [[60949   215]
+  [ 1818   236]]
+
+ [[61605   663]
+  [  323   627]]
+
+ [[60925  1761]
+  [  246   286]]
+
+ [[57091  1219]
+  [ 4191   717]]
+
+ [[59793  1906]
+  [ 1302   217]]
+
+ [[60882  1905]
+  [  325   106]]
+
+ [[59540  2083]
+  [ 1279   316]]
+
+ [[62361    10]
+  [  543   304]]
+
+ [[62400   519]
+  [  197   102]]
+
+ [[60796  1150]
+  [  964   308]]
+
+ [[58563   689]
+  [ 3258   708]]
+
+ [[62379   153]
+  [  606    80]]
+
+ [[62597   154]
+  [  325   142]]
+
+ [[62724   248]
+  [  197    49]]
+
+ [[45587  1610]
+  [13827  2194]]
+
+ [[59884  2612]
+  [  352   370]]
+
+ [[61528   869]
+  [  762    59]]
+
+ [[56275  1589]
+  [ 3661  1693]]
+
+ [[60642   843]
+  [ 1097   636]]
+
+ [[62544   520]
+  [  130    24]]
+
+ [[56235  3972]
+  [ 1183  1828]]
+
+ [[62046   594]
+  [  451   127]]
+
+ [[60954  1566]
+  [  340   358]]
+
+ [[62782   271]
+  [  130    35]]
+
+ [[58723  3360]
+  [  734   401]]
+
+ [[62369   785]
+  [   30    34]]]",3,88504
