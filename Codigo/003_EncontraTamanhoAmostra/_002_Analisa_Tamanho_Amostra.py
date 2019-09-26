@@ -16,7 +16,7 @@ from _001_Treina_E_Testa_Modelos import *
 sys.path.insert(1, '/home/anarocha/myGit/classificadorDeAssuntos/Codigo/005_FeatureEngineering')
 from _002_Extrai_Features import *
 
-path='/home/anarocha/myGit/classificadorDeAssuntos/Resultados/EXP9_RodandoTudo/'
+path='/home/anarocha/myGit/classificadorDeAssuntos/Resultados/EXP10_32GigasOnTheHouse/'
 if not os.path.exists(path):
     os.makedirs(path)
 
@@ -97,16 +97,35 @@ for qtdElementosPorAssunto in range(10000000,10000001, 10000000):
     mostra_balanceamento_assunto(y_train.value_counts(), title, "Quantidade Elementos", "Código Assunto", path, y_train.shape[0])
     x_tfidf_train, x_tfidf_test = extraiFeaturesTFIDF(df_amostra,X_train,X_test )
 
+    print("-------------------------------------------------------------------------")
+    print(nomeAlgoritmoSVM)
+    print("-------------------------------------------------------------------------")
+    modeloSVM = treina_modelo(x_tfidf_train, y_train, classificadorSVM, nomeAlgoritmoSVM)
+    modeloSVM = testa_modelo(x_tfidf_test, y_test, modeloSVM)
+    modeloSVM.imprime()
+    modeloSVM.setIdExecucao(id_execucao)
+    modeloSVM.setData(data)
+    df_resultados = df_resultados.append(modeloSVM.__dict__, ignore_index=True)
 
-    # print("-------------------------------------------------------------------------")
-    # print(nomeAlgoritmoNB)
-    # print("-------------------------------------------------------------------------")
-    # modeloNB = treina_modelo(x_tfidf_train, y_train, classificadorNB, nomeAlgoritmoNB)
-    # modeloNB = testa_modelo(x_tfidf_test, y_test, modeloNB)
-    # modeloNB.imprime()
-    # modeloNB.setIdExecucao(id_execucao)
-    # modeloNB.setData(data)
-    # df_resultados = df_resultados.append(modeloNB.__dict__, ignore_index=True)
+    print("-------------------------------------------------------------------------")
+    print(nomeAlgoritmoMLP)
+    print("-------------------------------------------------------------------------")
+    modeloMLP = treina_modelo(x_tfidf_train, y_train, classificadorMLP, nomeAlgoritmoMLP)
+    modeloMLP = testa_modelo(x_tfidf_test, y_test, modeloMLP)
+    modeloMLP.imprime()
+    modeloMLP.setIdExecucao(id_execucao)
+    modeloMLP.setData(data)
+    df_resultados = df_resultados.append(modeloMLP.__dict__, ignore_index=True)
+
+    print("-------------------------------------------------------------------------")
+    print(nomeAlgoritmoNB)
+    print("-------------------------------------------------------------------------")
+    modeloNB = treina_modelo(x_tfidf_train, y_train, classificadorNB, nomeAlgoritmoNB)
+    modeloNB = testa_modelo(x_tfidf_test, y_test, modeloNB)
+    modeloNB.imprime()
+    modeloNB.setIdExecucao(id_execucao)
+    modeloNB.setData(data)
+    df_resultados = df_resultados.append(modeloNB.__dict__, ignore_index=True)
 
     print("-------------------------------------------------------------------------")
     print(nomeAlgoritmoRF)
@@ -118,43 +137,23 @@ for qtdElementosPorAssunto in range(10000000,10000001, 10000000):
     modeloRF.setData(data)
     df_resultados = df_resultados.append(modeloRF.__dict__, ignore_index=True)
 
-    # print("-------------------------------------------------------------------------")
-    # print(nomeAlgoritmoSVM)
-    # print("-------------------------------------------------------------------------")
-    # modeloSVM = treina_modelo(x_tfidf_train, y_train, classificadorSVM, nomeAlgoritmoSVM)
-    # modeloSVM = testa_modelo(x_tfidf_test, y_test, modeloSVM)
-    # modeloSVM.imprime()
-    # modeloSVM.setIdExecucao(id_execucao)
-    # modeloSVM.setData(data)
-    # df_resultados = df_resultados.append(modeloSVM.__dict__, ignore_index=True)
-    #
-    # print("-------------------------------------------------------------------------")
-    # print(nomeAlgoritmoMLP)
-    # print("-------------------------------------------------------------------------")
-    # modeloMLP = treina_modelo(x_tfidf_train, y_train, classificadorMLP, nomeAlgoritmoMLP)
-    # modeloMLP = testa_modelo(x_tfidf_test, y_test, modeloMLP)
-    # modeloMLP.imprime()
-    # modeloMLP.setIdExecucao(id_execucao)
-    # modeloMLP.setData(data)
-    # df_resultados = df_resultados.append(modeloMLP.__dict__, ignore_index=True)
 
     with open(nome_arquivo_destino, 'a') as f:
         df_resultados.to_csv(f, header=False)
 	
     print("-------------------------------------------------------------------------")
-path='/home/anarocha/myGit/classificadorDeAssuntos/Resultados/EXP8_MedindoTamanhoDaAmostra_ComBootstrap/'
-import pandas as pd
-df_resultados.to_csv(path + "Metricas", header=True)
-df_resultados = pd.read_csv(path + "Metricas.csv")
-df_resultados.columns = ['index','id_execucao', 'data', 'nome','feature_type','tempo_processamento','tamanho_conjunto_treinamento','accuracy','micro_precision','micro_recall','micro_fscore','macro_precision','macro_recall','macro_fscore','best_params_','best_estimator_','grid_scores_','confusion_matrix','num_estimators','max_samples']
-df_resultados.shape
-df_teste = df_resultados.drop_duplicates()
-df_teste.shape
-df_resultados = df_teste
-plota_evolucao_algoritmo(df_resultados,nomeAlgoritmoNB )
-plota_evolucao_algoritmo(df_resultados,nomeAlgoritmoRF )
-plota_evolucao_algoritmo(df_resultados,nomeAlgoritmoSVM )
-plota_evolucao_algoritmo(df_resultados,nomeAlgoritmoMLP )
+# import pandas as pd
+# df_resultados.to_csv(path + "Metricas", header=True)
+# df_resultados = pd.read_csv(path + "Metricas.csv")
+# df_resultados.columns = ['index','id_execucao', 'data', 'nome','feature_type','tempo_processamento','tamanho_conjunto_treinamento','accuracy','micro_precision','micro_recall','micro_fscore','macro_precision','macro_recall','macro_fscore','best_params_','best_estimator_','grid_scores_','confusion_matrix','num_estimators','max_samples']
+# df_resultados.shape
+# df_teste = df_resultados.drop_duplicates()
+# df_teste.shape
+# df_resultados = df_teste
+# plota_evolucao_algoritmo(df_resultados,nomeAlgoritmoNB )
+# plota_evolucao_algoritmo(df_resultados,nomeAlgoritmoRF )
+# plota_evolucao_algoritmo(df_resultados,nomeAlgoritmoSVM )
+# plota_evolucao_algoritmo(df_resultados,nomeAlgoritmoMLP )
 
 
 

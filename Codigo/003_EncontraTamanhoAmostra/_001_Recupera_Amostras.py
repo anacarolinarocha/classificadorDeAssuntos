@@ -24,26 +24,25 @@ import warnings
 # Função que recuperar amostra estratificada pelo codigo de assunto dentre todos os codigos existentes no dataset. Nao faz bootstrapping..
 #----------------------------------------------------------------------------------------------------------------------
 def stratified_sample_df(df, col, n_samples):
-    #min_accepted = 5
+    # min_accepted = 50
     df_ = df.groupby(col).apply(lambda x: x.sample(min(x.shape[0], n_samples),random_state=42))
 
-    # //TODO: pode ser que seja preciso adicionar o oversampling no treinamento aqui para as amostras pequenas....
-    # df_ = df.groupby(col).apply(lambda x: x.sample(calcularValorMinimo(x.shape[0], n_samples,min_accepted), random_state=42, replace = isBootstraping(x.shape[0], min_accepted)))
+    # df_ = df.groupby(col).apply(lambda x: x.sample(calcularValorMinimo(x.shape[0], n_samples,min_accepted), random_state=42, replace = isResampling(x.shape[0], min_accepted)))
     df_.index = df_.index.droplevel(0)
     return df_
-#
-# def isBootstraping(value, min_accepted):
-#     if(value > min_accepted):
-#         return False
-#     else:
-#         return True
-#
-# def calcularValorMinimo(value,n_samples, min_accepted):
-#     minimoEncontrado = min(value, n_samples)
-#     if(minimoEncontrado < min_accepted):
-#         return min_accepted
-#     else:
-#         return minimoEncontrado
+
+def isResampling(value, min_accepted):
+    if(value > min_accepted):
+        return False
+    else:
+        return True
+
+def calcularValorMinimo(value,n_samples, min_accepted):
+    minimoEncontrado = min(value, n_samples)
+    if(minimoEncontrado < min_accepted):
+        return min_accepted
+    else:
+        return minimoEncontrado
 #----------------------------------------------------------------------------------------------------------------------
 # Função que mostra a distribuição de elementos por tribunal para cada assunto
 #----------------------------------------------------------------------------------------------------------------------

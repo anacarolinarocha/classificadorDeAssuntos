@@ -1,0 +1,1 @@
+,id_execucao,data,nome,feature_type,tempo_processamento,tamanho_conjunto_treinamento,accuracy,balanced_accuracy,micro_precision,micro_recall,micro_fscore,macro_precision,macro_recall,macro_fscore,best_params_,best_estimator_,grid_scores_,grid_cv_results,confusion_matrix,classification_report,num_estimators,max_samples
