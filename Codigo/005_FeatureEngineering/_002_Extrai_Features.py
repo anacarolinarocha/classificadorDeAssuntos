@@ -17,7 +17,7 @@ def recupera_tfidf_transformer(df):
     return tfidf_transformer
 
 def recupera_lsi_transformer(df):
-    tfidf_vectorizer = TfidfVectorizer(token_pattern=r'(?u)\b[A-Za-z]+\b', max_df=0.8)
+    tfidf_vectorizer = TfidfVectorizer(token_pattern=r'(?u)\b[A-Za-z]+\b', max_df=0.8, min_df=5)
     svd_model = TruncatedSVD(n_components=250, algorithm='randomized',n_iter=10, random_state=42)
     svd_transformer = Pipeline([('tfidf', tfidf_vectorizer),
                                 ('svd', svd_model)])

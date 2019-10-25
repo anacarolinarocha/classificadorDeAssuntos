@@ -43,11 +43,10 @@ def treina_modelo(x_tfidf_train,y_train, classificador, nomeModelo):
 def treina_modelo_grid_search(x_tfidf_train,y_train, classificador, nomeModelo,param_grid , n_iterations_grid_search, n_jobs):
     print(">> Fazendo Grid Search para classificador " + nomeModelo)
     # max_samples=round(x_tfidf_train.shape[0] * 0.6)
-    stratify_5_folds = StratifiedKFold(n_splits=5)
+    stratify_5_folds = StratifiedKFold(n_splits=5,random_state=42)
     start_time = time.time()
-    classificadorBag = BalancedBaggingClassifier(classificador,n_jobs=1, bootstrap=False)
+    classificadorBag = BalancedBaggingClassifier(classificador,n_jobs=1, bootstrap=False,random_state=42)
     classificadorOVR = OneVsRestClassifier(classificadorBag, n_jobs=1)
-    # grid_search = RandomizedSearchCV(estimator=classificadorOVR, param_distributions=param_grid, cv=stratify_5_folds, n_jobs=n_jobs, verbose=2, refit=True, n_iter=n_iterations_grid_search, scoring='balanced_accuracy')
     grid_search = RandomizedSearchCV(estimator=classificadorOVR, param_distributions=param_grid, cv=stratify_5_folds, n_jobs=n_jobs, verbose=2, refit=True, n_iter = n_iterations_grid_search, scoring = 'precision_weighted')
     grid_search.fit(x_tfidf_train, y_train)
     grid_results = ""
