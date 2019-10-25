@@ -59,7 +59,7 @@ def stemiza(texto):
 
 def processaTextosRegional(regionais):
     for  sigla_trt in regionais:
-        sigla_trt='02'
+        sigla_trt='21'
         print("----------------------------------------------------------------------------")
         print('Processando texto dos documentos do TRT ' + sigla_trt)
         nome_arquivo_origem = path + 'TRT_' + sigla_trt + '_2G_2010-2019_documentosSelecionados.csv'
@@ -96,7 +96,7 @@ def processaTextosRegional(regionais):
         print('Tempo para processamento do texto:' + str(timedelta(seconds=total_time)))
 
         #remove textos muito pequenos
-        df_trt = df_trt[df_trt['texto_processado'].map(len) > 100]
+        #df_trt = df_trt[df_trt['texto_processado'].map(len) > 100]
 
         #faz a stemizacao
         start_time = time.time()
@@ -124,16 +124,17 @@ def processaTextosRegional(regionais):
 
         df_trt.to_csv(nome_arquivo_destino, sep='#', quoting=csv.QUOTE_ALL)
 
-# print("Passando stopwords pelo pre processamento....")
-# stopwords = nltk.corpus.stopwords.words('portuguese')
-#
-# stopwords_processadas = []
-# for row in stopwords:
-#     palavraProcessada = normalize('NFKD', row).encode('ASCII', 'ignore').decode('ASCII')
-#     stopwords_processadas.append(palavraProcessada)
+print("Passando stopwords pelo pre processamento....")
+stopwords = nltk.corpus.stopwords.words('portuguese')
+
+stopwords_processadas = []
+for row in stopwords:
+    palavraProcessada = normalize('NFKD', row).encode('ASCII', 'ignore').decode('ASCII')
+    stopwords_processadas.append(palavraProcessada)
 
 
 
-# processaTextosRegional(['19'])
-#for i in range (5,25):
-#    processaTextosRegional([("{:02d}".format(i))])
+# processaTextosRegional(['20'])
+for i in range (21,22):
+   processaTextosRegional([("{:02d}".format(i))])
+# processaTextosRegional(['01','02'])

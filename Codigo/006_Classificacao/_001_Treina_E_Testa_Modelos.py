@@ -14,7 +14,8 @@ import time
 import sys
 sys.path.insert(1, '/home/anarocha/myGit/classificadorDeAssuntos/Codigo/006_Classificacao')
 from _002_Modelo import *
-
+import os
+# os.environ["KMP_AFFINITY"] = 'FALSE' #"Use "0",  ".F.", "off",// ja tentei "FALSE". "no"
 # ---------------------------------------------------------------------------------------------------------------------
 # Função que recebe um tipo de modelo, os dados de entrada e faz o treinamento OneVersusRest, com Balanceamento
 #----------------------------------------------------------------------------------------------------------------------
@@ -39,14 +40,15 @@ def treina_modelo(x_tfidf_train,y_train, classificador, nomeModelo):
     # modelo.setBestParams(self, best_params_)
     return modelo
 
-def treina_modelo_grid_search(x_tfidf_train,y_train, classificador, nomeModelo,param_grid , n_iterations_grid_search):
+def treina_modelo_grid_search(x_tfidf_train,y_train, classificador, nomeModelo,param_grid , n_iterations_grid_search, n_jobs):
     print(">> Fazendo Grid Search para classificador " + nomeModelo)
     # max_samples=round(x_tfidf_train.shape[0] * 0.6)
     stratify_5_folds = StratifiedKFold(n_splits=5)
     start_time = time.time()
     classificadorBag = BalancedBaggingClassifier(classificador,n_jobs=1, bootstrap=False)
     classificadorOVR = OneVsRestClassifier(classificadorBag, n_jobs=1)
-    grid_search = RandomizedSearchCV(estimator=classificadorOVR, param_distributions=param_grid, cv=stratify_5_folds, n_jobs=-1, verbose=2, refit=True, n_iter = n_iterations_grid_search, scoring = 'balanced_accuracy')
+    # grid_search = RandomizedSearchCV(estimator=classificadorOVR, param_distributions=param_grid, cv=stratify_5_folds, n_jobs=n_jobs, verbose=2, refit=True, n_iter=n_iterations_grid_search, scoring='balanced_accuracy')
+    grid_search = RandomizedSearchCV(estimator=classificadorOVR, param_distributions=param_grid, cv=stratify_5_folds, n_jobs=n_jobs, verbose=2, refit=True, n_iter = n_iterations_grid_search, scoring = 'precision_weighted')
     grid_search.fit(x_tfidf_train, y_train)
     grid_results = ""
     means = grid_search.cv_results_['mean_test_score']
@@ -69,6 +71,8 @@ def treina_modelo_grid_search(x_tfidf_train,y_train, classificador, nomeModelo,p
 # ---------------------------------------------------------------------------------------------------------------------
 # Função que testa um modelo de classificação
 #----------------------------------------------------------------------------------------------------------------------
+from sklearn.metrics import precision_recall_fscore_support as score
+
 def testa_modelo( x_tfidf_test,y_test, modelo):
     print(">> Testando classificador " + modelo.getNome())
     start_time = time.time()
@@ -87,7 +91,6 @@ def testa_modelo( x_tfidf_test,y_test, modelo):
     classes = y_test.unique().astype(str).tolist()
     print(classification_report(y_test, y_pred, target_names=classes))
     classification_report_dict = classification_report(y_test, y_pred,target_names=classes,output_dict=True)
-    classification_report_df = pd.DataFrame.from_dict(classification_report_dict)
     total_time = time.time() - start_time
     # print('Confusion matrix:\n', conf_mat)
     print("Tempo para recuperar métricas:  "+    str(timedelta(seconds=total_time)))

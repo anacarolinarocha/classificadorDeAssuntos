@@ -24,10 +24,16 @@ import warnings
 # Função que recuperar amostra estratificada pelo codigo de assunto dentre todos os codigos existentes no dataset. Nao faz bootstrapping..
 #----------------------------------------------------------------------------------------------------------------------
 def stratified_sample_df(df, col, n_samples):
+    # ------------------------------
+    #COM OVER SAMPLING
     # min_accepted = 50
+    # df_ = df.groupby(col).apply(lambda x: x.sample(calcularValorMinimo(x.shape[0], n_samples,min_accepted), random_state=42, replace = isResampling(x.shape[0], min_accepted)))
+
+    #------------------------------
+    #SEM OVER SAMPLING
     df_ = df.groupby(col).apply(lambda x: x.sample(min(x.shape[0], n_samples),random_state=42))
 
-    # df_ = df.groupby(col).apply(lambda x: x.sample(calcularValorMinimo(x.shape[0], n_samples,min_accepted), random_state=42, replace = isResampling(x.shape[0], min_accepted)))
+    # ------------------------------
     df_.index = df_.index.droplevel(0)
     return df_
 
@@ -89,9 +95,8 @@ def recupera_n_amostras_por_assunto_por_regional(sigla_trt, assuntos, nroElement
     :return:
     """
     path = '/media/DATA/classificadorDeAssuntos/Dados/naoPublicavel/ConferenciaDeAssuntos/OK/'
-    # sigla_trt='01'
-    # assuntos = [2546, 2086, 1855,2594,2458]
-    # assuntos = [2666,55345]
+    # sigla_trt='19'
+    # assuntos = [1690,1661]
     # nroElementos=20
     # print('Buscando dados para o TRT  '+ sigla_trt)
     nome_arquivo = path + 'TRT_' + sigla_trt + '_2G_2010-2019_documentosSelecionadosProcessados.csv'

@@ -1,5 +1,6 @@
 # ### ====================================================================================
-# Script que recupara os dados dos regionais e salva em CSV
+# Script que verifica qual é o percentual de processos que contem somente um assunto e
+# qual é o percentual que contem mais de um assunto
 # ### ====================================================================================
 
 from datetime import timedelta
