@@ -6,4 +6,8 @@ Codigo/001_Analises/Outputs/
 Codigo/001_Analises/Outputs/*
 *.p
 Codigo/002_ETL/__pycache__/
-Codigo/002_ETL/__pycache__/*
+Codigo/003_EncontraTamanhoAmostra/__pycache__/
+Codigo/005_FeatureEngineering/__pycache__/
+Codigo/006_Classificacao/__pycache__/
+Resultados/
+Resultados/*
