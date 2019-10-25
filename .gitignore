@@ -1,1 +1,9 @@
-/home/anarocha/myGit/classificadorDeAssuntos/Dados/naoPublicavel/*
+Dados/naoPublicavel/
+Dados/naoPublicavel/*
+__pychache__/
+__pychache__/*
+Codigo/001_Analises/Outputs/
+Codigo/001_Analises/Outputs/*
+*.p
+Codigo/002_ETL/__pycache__/
+Codigo/002_ETL/__pycache__/*
