@@ -1,4 +1,4 @@
-#Projeto Classificador de Assuntos
+# Projeto Classificador de Assuntos
 
 Este projeto foi desenvolvido como um entregável de uma dissertação de Mestrado em Computação Aplicada pela Universidade
  de Brasilia. O código em questão tem o objetivo de testar vários modelos de aprendizagem de máquina para fazer a 
