@@ -84,7 +84,7 @@ grande quantidade de textos por envolver grupos representativos de textos de 35 
 utilização mínima de 16 GB de memória RAM e 4 cores. Para cada quatro cores adicionais disponíveis, sugere-se acrescentar 
 mais 16GB de memória. 
 
-Os modelos são executados utilizando processamento paralelo, de forma que os modelos de Naive Bayes, SVM e M
+Os modelos são executados utilizando processamento paralelo, de forma que os modelos de SVM e RF usam 80% dos cores disponíveis, e o NB e MLP usam 35% dos cores (uma vez que tem maior uso de memória RAM) disponíveis.
 ### Entrada
 
 Como entrada, são esperados arquvios csv que contenham as colunas abaixo, na ordem apresentada. Nem todas as informações 
@@ -110,10 +110,13 @@ são utilizadas para a tarefa de classificação, mas foram recuperadas pois sã
 TRT_YY_documentosSelecionados.csv
 
 Onde: 
+
 YY representa a sigla de cada regional, sendo obrigatório 2 dígitos. 
 
 Exemplos:
+
 TRT_01_documentosSelecionados.csv
+
 TRT_22_documentosSelecionados.csv
 
 O diretório onde se deve buscar os arquivos deve ser passado com o parametro -dd no momento da chamada do código. 
