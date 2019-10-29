@@ -12,7 +12,7 @@ import pickle
 class Modelo:
     def __init__(self, nome, feature_type = None, tempo_processamento = None, best_params_ = None, best_estimator_ = None, grid_scores_ = None, accuracy = None,balanced_accuracy = None,
                  macro_precision = None, macro_recall = None, macro_fscore = None, micro_precision = None, micro_recall = None, micro_fscore = None, confusion_matrix = None,
-                 num_estimators = None, max_samples = None, tamanho_conjunto_treinamento = None, id_execucao = None, data = None, log_loss = None,
+                 num_estimators = None, max_samples = None, tamanho_conjunto_treinamento = None, id_execucao = None, data = None,
                  classification_report = None, grid_cv_results = None):
         self.nome = nome
         self.feature_type = feature_type
@@ -34,7 +34,6 @@ class Modelo:
         self.tamanho_conjunto_treinamento = tamanho_conjunto_treinamento
         self.id_execucao = id_execucao
         self.data = data
-        self.log_loss = log_loss
         self.classification_report = classification_report
         self.grid_cv_results = grid_cv_results
 
@@ -107,9 +106,6 @@ class Modelo:
     def getNome(self):
         return self.nome
 
-    def getLogLoss(self):
-        return self.log_loss
-
     def getFeatureType(self):
         return self.feature_type
 
@@ -167,9 +163,6 @@ class Modelo:
     def getData (self):
         return self.data
 
-    def getLogLoss(self):
-        return self.log_loss
-
     def getClassificationReport(self):
         return self.classification_report
 
@@ -186,7 +179,6 @@ class Modelo:
         print("Balanced Accuracy: " + str(self.balanced_accuracy))
         print('macro_precision %s \nmacro_recall    %s \nmacro_fscore    %s' % (self.macro_precision, self.macro_recall, self.macro_fscore))
         print('micro_precision %s \nmicro_recall    %s \nmicro_fscore    %s' % (self.micro_precision, self.micro_recall, self.micro_fscore))
-        print("Log loss: " + str(self.log_loss))
 
     def salvaClassificationReport(self, arquivo):
         df = pd.DataFrame.from_dict(self.classification_report)

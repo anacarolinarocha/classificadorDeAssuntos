@@ -23,7 +23,7 @@ from _003_BM25_Transformer import *
 # ---------------------------------------------------------------------------------------------------------------------
 # Setup
 #----------------------------------------------------------------------------------------------------------------------
-path='/home/anarocha/myGit/classificadorDeAssuntos/Resultados/EXP19_MelhoresModelos_BM25_TextosReduzidos/'
+path='/media/DATA/classificadorDeAssuntos/Dados/Resultados/EXP25_MelhoresModelos_TextsoReduzidos_BM25/'
 if not os.path.exists(path):
     os.makedirs(path)
 
@@ -65,24 +65,6 @@ def splitTrainTest(df_amostra_final):
                                                         random_state=42,
                                                         stratify=df_amostra_final['cd_assunto_nivel_3'])
     return X_train, X_test, y_train, y_test
-
-# ---------------------------------------------------------------------------------------------------------------------
-# Função que transforma matrizes textuais em matrizes processadas em tfidf
-#----------------------------------------------------------------------------------------------------------------------
-def extraiFeaturesTFIDF(df_amostra_final,X_train,X_test ):
-    tfidf_transformer = recupera_tfidf_transformer(df_amostra_final)
-    x_tfidf_train = tfidf_transformer.transform(X_train)
-    x_tfidf_test = tfidf_transformer.transform(X_test)
-    return tfidf_transformer, x_tfidf_train, x_tfidf_test
-
-def extraiFeaturesbm25(df_amostra_final,tfidf_transformer,x_tfidf_train,x_tfidf_test ):
-    df_amostra_final = df_amostra
-    df_amostra_final_tfidf = tfidf_transformer.transform(df_amostra_final)
-    bm25_transformer = BM25Transformer()
-    bm25_transformer.fit(df_amostra_final_tfidf)
-    x_bm25_train = bm25_transformer.transform(x_tfidf_train)
-    x_bm25_test = bm25_transformer.transform(x_tfidf_test)
-    return x_bm25_train, x_bm25_test
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Imprime evolucao de um algoritmo em grafico
@@ -131,25 +113,18 @@ def salvaModelo(modelo):
     with open(nome_arquivo_destino, 'a') as f:
         df_resultados.tail(1).to_csv(f, header=False)
 
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Chamada principal
 #----------------------------------------------------------------------------------------------------------------------
-# listaAssuntos=[2546,2086,1855]
-# listaAssuntos=[2546,2086]
-listaAssuntos=[2546,2086,1855,2594,2458,2029,2140,2478,2704,2021,2426,2656,8808,1844,1663,2666,2506,55220,2055,1806,2139,1888,2435,2215,5280,2554,2583,55170,2019,2117,1661,1904,2540,55345]
-listaAssuntosCorrigida=[2546,2086,1855,2594,2458,2704,2656,2140,2435,2029,2583,2554,8808,2117,2021,5280,1904,1844,2055,1907,1806,55220,2506,
+listaAssuntos=[2546,2086,1855,2594,2458,2704,2656,2140,2435,2029,2583,2554,8808,2117,2021,5280,1904,1844,2055,1907,1806,55220,2506,
                         4437,10570,1783,1888,2478,5356,1773,1663,5272,2215,1767,1661,1690]
-listaAssuntos =  listaAssuntosCorrigida
 
 
-
-#Classificadores iniais para ter um baseline antes do GridSearch
 classificadorNB = MultinomialNB()
-classificadorRF = RandomForestClassifier()
-# https://www.svm-tutorial.com/2014/10/svm-linear-kernel-good-text-classification/
-classificadorSVM = CalibratedClassifierCV(LinearSVC(class_weight='balanced', max_iter=30000),method='sigmoid', cv=5)
-# classificadorSVM = LinearSVC(class_weight='balanced', max_iter=10000)
-classificadorMLP = MLPClassifier(early_stopping= True)
+classificadorRF = RandomForestClassifier(random_state=42)
+classificadorSVM = CalibratedClassifierCV(LinearSVC(class_weight='balanced', max_iter=10000,random_state=42),method='sigmoid', cv=5)
+classificadorMLP = MLPClassifier(early_stopping= True,random_state=42)
 
 nomeAlgoritmoNB='Multinomial Naive Bayes'
 nomeAlgoritmoRF='Random Forest'
@@ -160,167 +135,175 @@ id_execucao = str(uuid.uuid1())[:7]
 data = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
 
-for qtdElementosPorAssunto in range(1000000,1000001, 1000000):
+# for qtdElementosPorAssunto in range(1000000,1000001, 1000000):
 # for qtdElementosPorAssunto in range(10, 11, 10):
-#     qtdElementosPorAssunto=10
-    df_amostra = recupera_amostras_de_todos_regionais(listaAssuntos, qtdElementosPorAssunto)
-    #Juntando os assuntos 55220 e 1855, ambos Indenização por Dano Moral
-    df_amostra.loc[df_amostra['cd_assunto_nivel_3'] == 55220, 'cd_assunto_nivel_3'] = 1855
-    df_amostra.loc[df_amostra['cd_assunto_nivel_2'] == 55218, 'cd_assunto_nivel_3'] = 2567
-    print('Total de textos recuperados: ' + str(len(df_amostra)))
-    df_amostra = df_amostra.dropna(subset=['texto_stemizado'])
-    print('Total de textos recuperados com conteúdo: ' + str(len(df_amostra)))
-    df_amostra['quantidade_de_palavras'] = [len(x.split()) for x in df_amostra['texto_processado'].tolist()]
 
-    sns.boxplot(df_amostra['quantidade_de_palavras'])
-    plt.savefig("{0}{1}.png".format(path, "Distribuicao_Tamanho_Textos_Original"))
+# ---------------------------------------------------------
+# Recuperando dados
+# ---------------------------------------------------------
+qtdElementosPorAssunto=1000000
+regionais=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]
+df_amostra = recupera_amostras_de_todos_regionais(listaAssuntos, qtdElementosPorAssunto,'/media/DATA/classificadorDeAssuntos/Dados/naoPublicavel/ConferenciaDeAssuntos/OK/')
+
+#Juntando os assuntos 55220 e 1855, ambos Indenização por Dano Moral
+df_amostra.loc[df_amostra['cd_assunto_nivel_3'] == 55220, 'cd_assunto_nivel_3'] = 1855
+df_amostra.loc[df_amostra['cd_assunto_nivel_2'] == 55218, 'cd_assunto_nivel_3'] = 2567
+
+print('Total de textos recuperados: ' + str(len(df_amostra)))
+df_amostra = df_amostra.dropna(subset=['texto_stemizado'])
+print('Total de textos recuperados com conteúdo: ' + str(len(df_amostra)))
+
+# ---------------------------------------------------------
+#Analisando tamanho dos textos
+# ---------------------------------------------------------
+df_amostra['quantidade_de_palavras'] = [len(x.split()) for x in df_amostra['texto_processado'].tolist()]
+sns.boxplot(df_amostra['quantidade_de_palavras'])
+plt.savefig("{0}{1}.png".format(path, "Distribuicao_Tamanho_Textos_Original"))
+
+df_amostra_f = df_amostra[((df_amostra.quantidade_de_palavras < 100) & (df_amostra.quantidade_de_palavras > 0))]
+print('Quantidade de textos entro 0 e 100 palavras: ' + str(len(df_amostra_f)))
+# df_amostra_f[['texto_processado','quantidade_de_palavras']].head(1000).to_csv(path + 'teste.csv',sep='#', quoting=csv.QUOTE_ALL)
+df_amostra_f = df_amostra[((df_amostra.quantidade_de_palavras < 200) & (df_amostra.quantidade_de_palavras > 100))]
+print('Quantidade de textos entro 100 e 200 palavras: ' + str(len(df_amostra_f)))
+df_amostra_f = df_amostra[((df_amostra.quantidade_de_palavras < 300) & (df_amostra.quantidade_de_palavras > 200))]
+print('Quantidade de textos entro 200 e 300 palavras: ' + str(len(df_amostra_f)))
+df_amostra_f = df_amostra[((df_amostra.quantidade_de_palavras < 400) & (df_amostra.quantidade_de_palavras > 300))]
+print('Quantidade de textos entro 300 e 400 palavras: ' + str(len(df_amostra_f)))
+df_amostra.shape
+df_amostra_f = df_amostra[((df_amostra.quantidade_de_palavras < 10000) & (df_amostra.quantidade_de_palavras > 400))]
+df_amostra_f= df_amostra_f.sort_values(by='quantidade_de_palavras', ascending=True)
+df_amostra_f.shape
+df_amostra = df_amostra_f
+plt.clf()
+plt.cla()
+plt.close()
+sns.boxplot(df_amostra['quantidade_de_palavras'])
+plt.savefig("{0}{1}.png".format(path, "Distribuicao_Tamanho_Textos_Depois_Da_Remocao_De_Textos_Com_Mais_De_400_e_Menos_de_10000"))
 
 
-    df_amostra_f = df_amostra[((df_amostra.quantidade_de_palavras < 100) & (df_amostra.quantidade_de_palavras > 0))]
-    print('Quantidade de textos entro 0 e 100 palavras: ' + str(len(df_amostra_f)))
-    df_amostra_f = df_amostra[((df_amostra.quantidade_de_palavras < 200) & (df_amostra.quantidade_de_palavras > 100))]
-    print('Quantidade de textos entro 100 e 200 palavras: ' + str(len(df_amostra_f)))
-    df_amostra_f = df_amostra[((df_amostra.quantidade_de_palavras < 300) & (df_amostra.quantidade_de_palavras > 200))]
-    print('Quantidade de textos entro 200 e 300 palavras: ' + str(len(df_amostra_f)))
-    df_amostra_f = df_amostra[((df_amostra.quantidade_de_palavras < 400) & (df_amostra.quantidade_de_palavras > 300))]
-    print('Quantidade de textos entro 300 e 400 palavras: ' + str(len(df_amostra_f)))
+print("=========================================================================")
+print('Total de textos utilizados: ' + str(len(df_amostra)))
+X_train, X_test, y_train, y_test = splitTrainTest(df_amostra)
+print("Amostra de treinamento de " + str(X_train.shape[0]) + " elementos")
+print("=========================================================================")
+title = "Balanceamento de assuntos na amostra de "  + str(X_train.shape[0])
+mostra_balanceamento_assunto(y_train.value_counts(), title, "Quantidade Elementos", "Código Assunto", path, y_train.shape[0])
+start_time = time.time()
+tfidf_transformer,x_tfidf_train, x_tfidf_test = extraiFeaturesTFIDF(df_amostra,X_train['texto_stemizado'],X_test['texto_stemizado'], path)
+bm25_transformer, x_bm25_train, x_bm25_test = extraiFeaturesBM25(df_amostra,tfidf_transformer,x_tfidf_train,x_tfidf_test,path )
+total_time = time.time() - start_time
+print("Tempo para montar matrizes BM25 (features:  "+ str(x_tfidf_train.shape[1]) + ") :" +   str(timedelta(seconds=total_time)))
+print("-------------------------------------------------------------------------")
+print(nomeAlgoritmoNB)
+print("-------------------------------------------------------------------------")
+# param_grid_NB = {
+#     'estimator__n_estimators': [3,5],
+#     'estimator__max_samples': [0.8,0.5],
+#     'estimator__base_estimator__alpha': [0.0001, 0.001, 0.01, 0.1, 0.5, 1]
+# }
+param_grid_NB = {
+    'estimator__n_estimators': [5],
+    'estimator__max_samples': [0.8],
+    'estimator__base_estimator__alpha': [0.5]
+}
+n_iterations_grid_search_NB=1
+modeloNB = treina_modelo_grid_search(x_bm25_train, y_train, classificadorNB, nomeAlgoritmoNB,'BM25',param_grid_NB,n_iterations_grid_search_NB, 6)
+modeloNB, y_pred, y_pred_proba_df = testa_modelo(x_bm25_test, y_test, modeloNB)
+modeloNB.setIdExecucao(id_execucao)
+modeloNB.setData(data)
+modeloNB.imprime()
+salvaModelo(modeloNB)
+salvaPredicao(modeloNB, X_test, y_test, y_pred,y_pred_proba_df)
 
-    df_amostra.shape
-    df_amostra_f = df_amostra[((df_amostra.quantidade_de_palavras < 10000) & (df_amostra.quantidade_de_palavras > 400))]
-    df_amostra_f= df_amostra_f.sort_values(by='quantidade_de_palavras', ascending=True)
-    df_amostra_f.shape
-    df_amostra = df_amostra_f
-    sns.boxplot(df_amostra['quantidade_de_palavras'])
-    plt.savefig("{0}{1}.png".format(path, "Distribuicao_Tamanho_Textos_Depois_Da_Remocao_De_Textos_Com_Mais_De_400_e_Menos_de_10000"))
-    # df_amostra_f= df_amostra_f[df_amostra_f['texto_stemizado'].str.contains("anex")]
-    #
-    # for index, row in df_amostra_f.head(5).iterrows():
-    #     print(row['texto_processado'])
-    #
-    # df_amostra_f[['texto_processado','quantidade_de_palavras']].head(1000).to_csv(path + 'teste.csv',sep='#', quoting=csv.QUOTE_ALL)
-    #
-    # sns.boxplot(df_amostra_f['quantidade_de_palavras'])
-    # plt.show()
-    X_train, X_test, y_train, y_test = splitTrainTest(df_amostra)
-    print("=========================================================================")
-    print("Amostra de treinamento de " + str(X_train.shape[0]) + " elementos")
-    print("=========================================================================")
-    title = "Balanceamento de assuntos na amostra de "  + str(X_train.shape[0])
-    mostra_balanceamento_assunto(y_train.value_counts(), title, "Quantidade Elementos", "Código Assunto", path, y_train.shape[0])
-    start_time = time.time()
-    tfidf_transformer,x_tfidf_train, x_tfidf_test = extraiFeaturesTFIDF(df_amostra,X_train['texto_stemizado'],X_test['texto_stemizado'] )
-    x_bm25_train, x_bm25_test = extraiFeaturesbm25(df_amostra,tfidf_transformer,x_tfidf_train,x_tfidf_test )
-    total_time = time.time() - start_time
-    print("Tempo para montar matrizes BM25 (features:  "+ str(x_tfidf_train.shape[1]) + ") :" +   str(timedelta(seconds=total_time)))
-    print("-------------------------------------------------------------------------")
-    print(nomeAlgoritmoNB)
-    print("-------------------------------------------------------------------------")
-    # param_grid_NB = {
-    #     'estimator__n_estimators': [3,5],
-    #     'estimator__max_samples': [0.8,0.5],
-    #     'estimator__base_estimator__alpha': [0.0001, 0.001, 0.01, 0.1, 0.5, 1]
-    # }
-    param_grid_NB = {
-        'estimator__n_estimators': [5],
-        'estimator__max_samples': [0.8],
-        'estimator__base_estimator__alpha': [0.001]
-    }
-    n_iterations_grid_search_NB=1
-    modeloNB = treina_modelo_grid_search(x_bm25_train, y_train, classificadorNB, nomeAlgoritmoNB,param_grid_NB,n_iterations_grid_search_NB, 6)
-    modeloNB, y_pred, y_pred_proba_df = testa_modelo(x_bm25_test, y_test, modeloNB)
-    modeloNB.setIdExecucao(id_execucao)
-    modeloNB.setData(data)
-    modeloNB.imprime()
-    salvaModelo(modeloNB)
-    salvaPredicao(modeloNB, X_test, y_test, y_pred,y_pred_proba_df)
+print("-------------------------------------------------------------------------")
+print(nomeAlgoritmoSVM)
+print("-------------------------------------------------------------------------")
 
-    print("-------------------------------------------------------------------------")
-    print(nomeAlgoritmoSVM)
-    print("-------------------------------------------------------------------------")
+# param_grid_SVM = {
+#     'estimator__n_estimators': [3, 5],
+#     'estimator__max_samples': [0.8, 0.5],
+#     'estimator__base_estimator__base_estimator__C': [0.01, 0.1, 1, 10]
+# }
+param_grid_SVM = {
+    'estimator__n_estimators': [5],
+    'estimator__max_samples': [0.8],
+    'estimator__base_estimator__base_estimator__C': [1]
+}
+n_iterations_grid_search_SVM = 1
+modeloSVM = treina_modelo_grid_search(x_bm25_train, y_train, classificadorSVM, nomeAlgoritmoSVM,'BM25', param_grid_SVM,
+                                      n_iterations_grid_search_SVM, 5)
+modeloSVM, y_pred, y_pred_proba_df = testa_modelo(x_bm25_test, y_test, modeloSVM)
+modeloSVM.imprime()
+modeloSVM.setIdExecucao(id_execucao)
+modeloSVM.setData(data)
+salvaModelo(modeloSVM)
+salvaPredicao(modeloSVM, X_test, y_test, y_pred, y_pred_proba_df)
 
-    # param_grid_SVM = {
-    #     'estimator__n_estimators': [3, 5],
-    #     'estimator__max_samples': [0.8, 0.5],
-    #     'estimator__base_estimator__base_estimator__C': [0.01, 0.1, 1, 10]
-    # }
-    param_grid_SVM = {
-        'estimator__n_estimators': [5],
-        'estimator__max_samples': [0.8],
-        'estimator__base_estimator__base_estimator__C': [1]
-    }
-    n_iterations_grid_search_SVM = 1
-    modeloSVM = treina_modelo_grid_search(x_bm25_train, y_train, classificadorSVM, nomeAlgoritmoSVM, param_grid_SVM,
-                                          n_iterations_grid_search_SVM, 5)
-    modeloSVM, y_pred, y_pred_proba_df = testa_modelo(x_bm25_test, y_test, modeloSVM)
-    modeloSVM.imprime()
-    modeloSVM.setIdExecucao(id_execucao)
-    modeloSVM.setData(data)
-    salvaModelo(modeloSVM)
-    salvaPredicao(modeloSVM, X_test, y_test, y_pred, y_pred_proba_df)
 
-    print("-------------------------------------------------------------------------")
-    print(nomeAlgoritmoRF)
-    print("-------------------------------------------------------------------------")
-    # param_grid_RF = {
-    #     'estimator__n_estimators': [3,5],
-    #     'estimator__max_samples': [0.8,0.5],
-    #     'estimator__base_estimator__max_depth': [30,50,100],
-    #     'estimator__base_estimator__n_estimators': [100,200,300],
-    #     'estimator__base_estimator__min_samples_leaf': [0.05, 0.1, 0.5],
-    #     'estimator__base_estimator__min_samples_split': [0.05, 0.1, 0.5],
-    #     'estimator__base_estimator__max_features': [0.3, 0.5, 0.8]
-    # }
-    param_grid_RF = {
-        'estimator__n_estimators': [5],
-        'estimator__max_samples': [0.5],
-        'estimator__base_estimator__max_depth': [50],
-        'estimator__base_estimator__n_estimators': [300],
-        'estimator__base_estimator__min_samples_leaf': [0.1],
-        'estimator__base_estimator__min_samples_split': [0.1],
-        'estimator__base_estimator__max_features': [0.5]
-    }
-    n_iterations_grid_search_RF = 1
-    modeloRF = treina_modelo_grid_search(x_bm25_train, y_train, classificadorRF, nomeAlgoritmoRF,param_grid_RF, n_iterations_grid_search_RF, 5)
-    modeloRF, y_pred , y_pred_proba_df= testa_modelo(x_bm25_test, y_test, modeloRF)
-    modeloRF.setIdExecucao(id_execucao)
-    modeloRF.setData(data)
-    modeloRF.imprime()
-    salvaModelo(modeloRF)
-    salvaPredicao(modeloRF, X_test, y_test, y_pred, y_pred_proba_df)
-    print("-------------------------------------------------------------------------")
-    print(nomeAlgoritmoMLP)
-    print("-------------------------------------------------------------------------")
-    # param_grid_MLP = {
-    #     'estimator__n_estimators': [3,5],
-    #     'estimator__max_samples': [0.8,0.5],
-    #     'estimator__base_estimator__hidden_layer_sizes': [(10,10),(10,5,10)],
-    #     'estimator__base_estimator__activation': ['identity', 'logistic', 'tanh', 'relu'],
-    #     'estimator__base_estimator__solver': ['sgd', 'adam','lbfgs'],
-    #     'estimator__base_estimator__alpha': [0.001, 0.01, 0.05, 0.1],
-    #     'estimator__base_estimator__learning_rate': ['constant','adaptive','invscaling'],
-    #     'estimator__base_estimator__max_iter': [200,300,400]
-    # }
-    param_grid_MLP = {
-        'estimator__n_estimators': [5],
-        'estimator__max_samples': [0.8],
-        'estimator__base_estimator__hidden_layer_sizes': [(10, 10)],
-        'estimator__base_estimator__activation': ['tanh'],
-        'estimator__base_estimator__solver': ['lbfgs'],
-        'estimator__base_estimator__alpha': [0.05],
-        'estimator__base_estimator__learning_rate': ['adaptive'],
-        'estimator__base_estimator__max_iter': [300]
-    }
-    n_iterations_grid_search_MLP = 1
-    modeloMLP = treina_modelo_grid_search(x_tfidf_train, y_train, classificadorMLP, nomeAlgoritmoMLP, param_grid_MLP,
-                                          n_iterations_grid_search_MLP, 5)
-    modeloMLP, y_pred, y_pred_proba_df = testa_modelo(x_tfidf_test, y_test, modeloMLP)
-    modeloMLP.setIdExecucao(id_execucao)
-    modeloMLP.setData(data)
-    modeloMLP.imprime()
-    salvaModelo(modeloMLP)
-    salvaPredicao(modeloMLP, X_test, y_test, y_pred, y_pred_proba_df)
+print("-------------------------------------------------------------------------")
+print(nomeAlgoritmoRF)
+print("-------------------------------------------------------------------------")
+# param_grid_RF = {
+#     'estimator__n_estimators': [3,5],
+#     'estimator__max_samples': [0.8,0.5],
+#     'estimator__base_estimator__max_depth': [30,50,100],
+#     'estimator__base_estimator__n_estimators': [100,200,300],
+#     'estimator__base_estimator__min_samples_leaf': [0.05, 0.1, 0.5],
+#     'estimator__base_estimator__min_samples_split': [0.05, 0.1, 0.5],
+#     'estimator__base_estimator__max_features': [0.3, 0.5, 0.8]
+# }
+param_grid_RF = {
+    'estimator__n_estimators': [3],
+    'estimator__max_samples': [0.5],
+    'estimator__base_estimator__max_depth': [100],
+    'estimator__base_estimator__n_estimators': [200],
+    'estimator__base_estimator__min_samples_leaf': [0.05],
+    'estimator__base_estimator__min_samples_split': [ 0.1],
+    'estimator__base_estimator__max_features': [0.3]
+}
+n_iterations_grid_search_RF = 1
+modeloRF = treina_modelo_grid_search(x_bm25_train, y_train, classificadorRF, nomeAlgoritmoRF,'BM25',param_grid_RF, n_iterations_grid_search_RF, 5)
+modeloRF, y_pred , y_pred_proba_df= testa_modelo(x_bm25_test, y_test, modeloRF)
+modeloRF.setIdExecucao(id_execucao)
+modeloRF.setData(data)
+modeloRF.imprime()
+salvaModelo(modeloRF)
+salvaPredicao(modeloRF, X_test, y_test, y_pred, y_pred_proba_df)
 
-    print("-------------------------------------------------------------------------")
+print("-------------------------------------------------------------------------")
+print(nomeAlgoritmoMLP)
+print("-------------------------------------------------------------------------")
+# param_grid_MLP = {
+#     'estimator__n_estimators': [3,5],
+#     'estimator__max_samples': [0.8,0.5],
+#     'estimator__base_estimator__hidden_layer_sizes': [(10,10),(10,5,10)],
+#     'estimator__base_estimator__activation': ['identity', 'logistic', 'tanh', 'relu'],
+#     'estimator__base_estimator__solver': ['sgd', 'adam','lbfgs'],
+#     'estimator__base_estimator__alpha': [0.001, 0.01, 0.05, 0.1],
+#     'estimator__base_estimator__learning_rate': ['constant','adaptive','invscaling'],
+#     'estimator__base_estimator__max_iter': [200,300,400]
+# }
+param_grid_MLP = {
+    'estimator__n_estimators': [3],
+    'estimator__max_samples': [0.8],
+    'estimator__base_estimator__hidden_layer_sizes': [(10,10)],
+    'estimator__base_estimator__activation': ['logistic'],
+    'estimator__base_estimator__solver': ['lbfgs'],
+    'estimator__base_estimator__alpha': [0.05],
+    'estimator__base_estimator__learning_rate': ['constant'],
+    'estimator__base_estimator__max_iter': [400]
+}
+n_iterations_grid_search_MLP = 1
+modeloMLP = treina_modelo_grid_search(x_bm25_train, y_train, classificadorMLP, nomeAlgoritmoMLP,'BM25',param_grid_MLP,n_iterations_grid_search_MLP, 3)
+modeloMLP,y_pred , y_pred_proba_df= testa_modelo(x_bm25_test, y_test, modeloMLP)
+modeloMLP.setIdExecucao(id_execucao)
+modeloMLP.setData(data)
+modeloMLP.imprime()
+salvaModelo(modeloMLP)
+salvaPredicao(modeloMLP, X_test, y_test, y_pred, y_pred_proba_df)
+
+print("-------------------------------------------------------------------------")
+
 
 # import pandas as pd
 # df_resultados.to_csv(path + "Metricas", header=True)

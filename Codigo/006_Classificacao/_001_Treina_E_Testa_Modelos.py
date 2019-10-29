@@ -40,7 +40,7 @@ def treina_modelo(x_tfidf_train,y_train, classificador, nomeModelo):
     # modelo.setBestParams(self, best_params_)
     return modelo
 
-def treina_modelo_grid_search(x_tfidf_train,y_train, classificador, nomeModelo,param_grid , n_iterations_grid_search, n_jobs):
+def treina_modelo_grid_search(x_tfidf_train,y_train, classificador, nomeModelo, feature_type, param_grid ,n_iterations_grid_search, n_jobs):
     print(">> Fazendo Grid Search para classificador " + nomeModelo)
     # max_samples=round(x_tfidf_train.shape[0] * 0.6)
     stratify_5_folds = StratifiedKFold(n_splits=5,random_state=42)
@@ -57,15 +57,16 @@ def treina_modelo_grid_search(x_tfidf_train,y_train, classificador, nomeModelo,p
 
     total_time = time.time() - start_time
     print("Tempo para execução do GridSearch para OVR Balanced Bagging " + nomeModelo + " para " + str(x_tfidf_train.shape[0]) + " elementos: ", str(timedelta(seconds=total_time)))
-    modelo = Modelo(nomeModelo)
+    modelo = Modelo(feature_type + '_' + nomeModelo)
     # modelo.setMaxSamples(max_samples)
     modelo.setTamanhoConjuntoTreinamento(x_tfidf_train.shape[0])
     modelo.setTempoProcessamento(str(timedelta(seconds=grid_search.refit_time_)))
-    modelo.setFeatureType('TF-IDF')
+    modelo.setFeatureType(feature_type)
     modelo.setBestEstimator(grid_search.best_estimator_)
     modelo.setBestParams(grid_search.best_params_)
     modelo.setGridCVResults(grid_results)
     return modelo
+
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Função que testa um modelo de classificação
@@ -88,7 +89,7 @@ def testa_modelo( x_tfidf_test,y_test, modelo):
     micro_precision, micro_recall, micro_fscore = score(y_test, y_pred, average='weighted', labels=np.unique(y_pred))[:3]
     confusion_matrix = multilabel_confusion_matrix(y_true=y_test, y_pred=y_pred)
     classes = y_test.unique().astype(str).tolist()
-    print(classification_report(y_test, y_pred, target_names=classes))
+    #print(classification_report(y_test, y_pred, target_names=classes))
     classification_report_dict = classification_report(y_test, y_pred,target_names=classes,output_dict=True)
     total_time = time.time() - start_time
     # print('Confusion matrix:\n', conf_mat)
