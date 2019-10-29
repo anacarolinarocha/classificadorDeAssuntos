@@ -114,7 +114,7 @@ nome_classification_reports = path_resultados + 'ClassificationReport'
 listaAssuntos=[2546,2086,1855,2594,2458,2704,2656,2140,2435,2029,2583,2554,8808,2117,2021,5280,1904,1844,2055,1907,1806,55220,2506,
                         4437,10570,1783,1888,2478,5356,1773,1663,5272,2215,1767,1661,1690]
 
-listaAssuntos=[2546,2086,1855]
+# listaAssuntos=[2546,2086,1855]
 
 classificadorNB = MultinomialNB()
 classificadorRF = RandomForestClassifier(random_state=42)
