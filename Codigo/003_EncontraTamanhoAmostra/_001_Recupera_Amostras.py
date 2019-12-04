@@ -67,13 +67,24 @@ def mostra_representatividade_regional_por_amostra(df, path):
 # Função que mostra a distribuição de elementos por assunto
 #----------------------------------------------------------------------------------------------------------------------
 def mostra_balanceamento_assunto(data, title, ylabel, xlabel, path, qnt_elem):
+    plt.clf()
+    plt.cla()
+    plt.close()
     data.plot.bar(ylim=0)
     plt.title(title)
     plt.ylabel(ylabel)
     plt.xlabel(xlabel)
     plt.legend()
+    plt.bar(data)
     plt.savefig("{0}{1}.png".format(path, "Balanceamento_Assuntos_" + str(qnt_elem) + "_Elementos"))
-    # plt.show()
+    #plt.show()
+
+    df = pd.DataFrame(y_train.value_counts())
+    df = df.reset_index()
+    df.columns =  ['assunto_nivel_3', 'qnt_documentos']
+    plt.bar(df['assunto_nivel_3'], df['qnt_documentos'], align='center', alpha=0.5)
+
+
 
 #//TODO: Ajustar esse grafico para que ele traga o nome do assunto ao inves do codigo, ou adicionar legenda
 #----------------------------------------------------------------------------------------------------------------------
@@ -83,7 +94,7 @@ def collect_results(result):
     """Uses apply_async's callback to setup up a separate Queue for each process"""
     results.extend(result)
 
-def recupera_n_amostras_por_assunto_por_regional(sigla_trt, assuntos, nroElementos,path):
+def recupera_n_amostras_por_assunto_por_regional(sigla_trt, assuntos, nroElementos,path, sufixo):
 
     """
     Função que, dado um regional, uma lista de assuntos, e definida a a quantidade de amostras de cada item,
@@ -94,8 +105,8 @@ def recupera_n_amostras_por_assunto_por_regional(sigla_trt, assuntos, nroElement
     ao mínimo existente
     :return:
     """
-    nome_arquivo = path + 'TRT_' + sigla_trt + '_2G_2010-2019_documentosSelecionadosProcessados.csv'
-    nome_arquivo = path + 'TRT_' + sigla_trt + '_documentosSelecionadosProcessados.csv'
+    nome_arquivo = path + 'TRT_' + sigla_trt + '_documentosSelecionadosProcessados' + sufixo + '.csv'
+    #nome_arquivo = path + 'TRT_' + sigla_trt + '_2G_2010-2019_documentosSelecionadosProcessados' + sufixo + '.csv'
     if not os.path.exists(nome_arquivo):
         print( "Não foi encontrado o arquivo de documentos do TRT " + sigla_trt + ". Buscou-se pelo arquivo " + nome_arquivo)
         return []
@@ -115,7 +126,7 @@ def recupera_n_amostras_por_assunto_por_regional(sigla_trt, assuntos, nroElement
 
     return df_amostra.values.tolist()
 
-def recupera_amostras_de_todos_regionais(listaAssuntos, nroElementos,path,regionais=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]):
+def recupera_amostras_de_todos_regionais(listaAssuntos, nroElementos,path, sufixo='',regionais=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]):
     """
     Função que busca documentos em arquivos CSVs para os 24 Tribunais Regionais
     :param listaAssuntos: assuntos a serem buscados
@@ -132,7 +143,7 @@ def recupera_amostras_de_todos_regionais(listaAssuntos, nroElementos,path,region
     pool = mp.Pool(processes=mp.cpu_count())
     # for i in range (1,25):
     for regional in regionais:
-        pool.apply_async(recupera_n_amostras_por_assunto_por_regional, args=("{:02d}".format(regional),listaAssuntos,nroElementos,path), callback=collect_results)
+        pool.apply_async(recupera_n_amostras_por_assunto_por_regional, args=("{:02d}".format(regional),listaAssuntos,nroElementos,path,sufixo), callback=collect_results)
     pool.close()
     pool.join()
 

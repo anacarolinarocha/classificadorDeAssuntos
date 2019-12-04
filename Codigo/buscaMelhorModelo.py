@@ -10,13 +10,16 @@ from datetime import datetime
 import seaborn as sns
 import matplotlib.pyplot as plt
 import uuid
-import matplotlib.pyplot as plt
+import os
 from sklearn.calibration import CalibratedClassifierCV
 sys.path.insert(1, sys.path[0] + '/003_EncontraTamanhoAmostra')
+#sys.path.insert(1, '/home/anarocha/myGit/classificadorDeAssuntos/Codigo/' + '/003_EncontraTamanhoAmostra')
 from _001_Recupera_Amostras import *
 sys.path.insert(1, sys.path[0] + '/006_Classificacao')
+#sys.path.insert(1, '/home/anarocha/myGit/classificadorDeAssuntos/Codigo/' + '/006_Classificacao')
 from _001_Treina_E_Testa_Modelos import *
 sys.path.insert(1, sys.path[0] + '/005_FeatureEngineering')
+#sys.path.insert(1, '/home/anarocha/myGit/classificadorDeAssuntos/Codigo/' + '/005_FeatureEngineering')
 from _002_Extrai_Features import *
 from _003_BM25_Transformer import *
 from _001_Processa_Texto import *
@@ -36,7 +39,8 @@ args = parser.parse_args()
 path_fonte_de_dados = vars(args).get('dd')[0]
 path_resultados = vars(args).get('dr')[0]
 
-
+#path_fonte_de_dados = '/media/DATA/classificadorDeAssuntos/Dados/naoPublicavel/Documentos/'
+#path_resultados = '/media/DATA/classificadorDeAssuntos/Dados/naoPublicavel/Documentos/DocsProcessados/'
 # path_fonte_de_dados = '/media/DATA/classificadorDeAssuntos/Dados/naoPublicavel/ConferenciaDeAssuntos/OK/'
 # path_resultados = '/media/DATA/classificadorDeAssuntos/Dados/Resultados/EXP99_Final/'
 
@@ -114,7 +118,7 @@ nome_classification_reports = path_resultados + 'ClassificationReport'
 listaAssuntos=[2546,2086,1855,2594,2458,2704,2656,2140,2435,2029,2583,2554,8808,2117,2021,5280,1904,1844,2055,1907,1806,55220,2506,
                         4437,10570,1783,1888,2478,5356,1773,1663,5272,2215,1767,1661,1690]
 
-# listaAssuntos=[2546,2086,1855]
+#listaAssuntos=[2546,2086,1855]
 
 classificadorNB = MultinomialNB()
 classificadorRF = RandomForestClassifier(random_state=42)
@@ -145,13 +149,14 @@ print("=========================================================================
 print("Pré-processamento de documentos")
 print("=========================================================================")
 path_destino_de_dados = path_fonte_de_dados + 'DocumentosProcessados/'
-# processaDocumentos(path_fonte_de_dados,path_destino_de_dados)
+#processaDocumentos(path_fonte_de_dados,path_destino_de_dados)
 print("Todos os documentos disponíveis foram processados")
 
 # ---------------------------------------------------------
 # Recuperando dados (
 # ---------------------------------------------------------
 qtdElementosPorAssunto=1000000
+#qtdElementosPorAssunto=200
 df_amostra = recupera_amostras_de_todos_regionais(listaAssuntos, qtdElementosPorAssunto, path_destino_de_dados)
 
 #Juntando os assuntos 55220 e 1855, ambos Indenização por Dano Moral
@@ -191,7 +196,7 @@ X_train, X_test, y_train, y_test = splitTrainTest(df_amostra)
 print("Amostra de treinamento de " + str(X_train.shape[0]) + " elementos")
 print("=========================================================================")
 title = "Balanceamento de assuntos na amostra de "  + str(X_train.shape[0])
-mostra_balanceamento_assunto(y_train.value_counts(), title, "Quantidade Elementos", "Código Assunto", path_resultados, y_train.shape[0])
+#mostra_balanceamento_assunto(y_train.value_counts(), title, "Quantidade Elementos", "Código Assunto", path_resultados, y_train.shape[0])
 
 
 print("=========================================================================")
@@ -199,7 +204,7 @@ print("TF-IDF")
 print("=========================================================================")
 
 start_time = time.time()
-tfidf_transformer,x_tfidf_train, x_tfidf_test = extraiFeaturesTFIDF(df_amostra, X_train['texto_stemizado'], X_test['texto_stemizado'], path_resultados)
+tfidf_transformer,x_tfidf_train, x_tfidf_test = extraiFeaturesTFIDF_train_test(df_amostra, X_train['texto_stemizado'], X_test['texto_stemizado'], path_resultados)
 total_time = time.time() - start_time
 print("Tempo para montar matrizes TF-IDF (features:  "+ str(x_tfidf_train.shape[1]) + ") :" +   str(timedelta(seconds=total_time)))
 
@@ -212,7 +217,7 @@ param_grid_NB = {
     'estimator__max_samples': [0.8,0.5],
     'estimator__base_estimator__alpha': [0.0001, 0.001, 0.01, 0.1, 0.5, 1]
 }
-modeloNB = chama_treinamento_modelo(x_tfidf_train, x_tfidf_test,classificadorNB, nomeAlgoritmoNB , 'TFIDF',param_grid_NB,1,n_cores_grande)
+modeloNB = chama_treinamento_modelo(x_tfidf_train, x_tfidf_test,classificadorNB, nomeAlgoritmoNB , 'TFIDF',param_grid_NB,10,n_cores_grande)
 modelos.append([modeloNB.getNome(),modeloNB.getFeatureType(),modeloNB.getMicroPrecision(),modeloNB])
 print("-------------------------------------------------------------------------")
 print('GridSearch do ' + nomeAlgoritmoSVM)
@@ -223,7 +228,7 @@ param_grid_SVM = {
     'estimator__max_samples': [0.8, 0.5],
     'estimator__base_estimator__base_estimator__C': [0.01, 0.1, 1, 10]
 }
-modeloSVM = chama_treinamento_modelo(x_tfidf_train, x_tfidf_test,classificadorSVM, nomeAlgoritmoSVM,'TFIDF',param_grid_SVM, 1,n_cores_grande)
+modeloSVM = chama_treinamento_modelo(x_tfidf_train, x_tfidf_test,classificadorSVM, nomeAlgoritmoSVM,'TFIDF',param_grid_SVM, 10,n_cores_grande)
 modelos.append([modeloSVM.getNome(),modeloSVM.getFeatureType(),modeloSVM.getMicroPrecision(),modeloSVM])
 print("-------------------------------------------------------------------------")
 print('GridSearch do ' + nomeAlgoritmoRF)
@@ -237,7 +242,7 @@ param_grid_RF = {
     'estimator__base_estimator__min_samples_split': [0.05, 0.1, 0.5],
     'estimator__base_estimator__max_features': [0.3, 0.5, 0.8]
 }
-modeloRF = chama_treinamento_modelo(x_tfidf_train, x_tfidf_test,classificadorRF, nomeAlgoritmoRF,'TFIDF',param_grid_RF, 1,n_cores_grande)
+modeloRF = chama_treinamento_modelo(x_tfidf_train, x_tfidf_test,classificadorRF, nomeAlgoritmoRF,'TFIDF',param_grid_RF, 10,n_cores_grande)
 modelos.append([modeloRF.getNome(),modeloRF.getFeatureType(),modeloRF.getMicroPrecision(),modeloRF])
 
 print("-------------------------------------------------------------------------")
@@ -253,7 +258,7 @@ param_grid_MLP = {
     'estimator__base_estimator__learning_rate': ['constant','adaptive','invscaling'],
     'estimator__base_estimator__max_iter': [200,300,400]
 }
-modeloMLP = chama_treinamento_modelo(x_tfidf_train, x_tfidf_test,classificadorMLP,nomeAlgoritmoMLP, 'TFIDF',param_grid_MLP, 1,n_cores_pequeno)
+modeloMLP = chama_treinamento_modelo(x_tfidf_train, x_tfidf_test,classificadorMLP,nomeAlgoritmoMLP, 'TFIDF',param_grid_MLP, 10,n_cores_pequeno)
 modelos.append([modeloMLP.getNome(),modeloMLP.getFeatureType(),modeloMLP.getMicroPrecision(),modeloMLP])
 
 print("=========================================================================")

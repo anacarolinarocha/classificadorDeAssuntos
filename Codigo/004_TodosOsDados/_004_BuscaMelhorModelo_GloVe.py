@@ -19,31 +19,17 @@ from _001_Treina_E_Testa_Modelos import *
 sys.path.insert(1, '/home/anarocha/myGit/classificadorDeAssuntos/Codigo/005_FeatureEngineering')
 from _002_Extrai_Features import *
 from _003_BM25_Transformer import *
+from _001_Processa_Texto import *
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Setup
 #----------------------------------------------------------------------------------------------------------------------
-path='/media/DATA/classificadorDeAssuntos/Dados/Resultados/EXP27_MelhoresModelos_TextsoReduzidos_TFIDF_NGRAM/'
+path='/media/DATA/classificadorDeAssuntos/Dados/Resultados/EXP29_MelhoresModelos_TextsoReduzidos_Glove_Sum/'
 if not os.path.exists(path):
     os.makedirs(path)
 
 float_formatter = lambda x: "%.4f" % x
 np.set_printoptions(formatter={'float_kind':float_formatter})
-
-class PrintPythonConsoleOnFileAlso(object):
-    def __init__(self, *files):
-        self.files = files
-    def write(self, obj):
-        for f in self.files:
-            f.write(obj)
-            f.flush() # If you want the output to be visible immediately
-    def flush(self) :
-        for f in self.files:
-            f.flush()
-
-f = open(path + 'out.txt', 'w')
-original = sys.stdout
-sys.stdout = PrintPythonConsoleOnFileAlso(sys.stdout, f)
 
 # sys.stdout = original
 # print "This won't appear on file"  # Only on stdout
@@ -124,11 +110,11 @@ def salvaTransformer(transformer, nome, path):
 #----------------------------------------------------------------------------------------------------------------------
 listaAssuntos=[2546,2086,1855,2594,2458,2704,2656,2140,2435,2029,2583,2554,8808,2117,2021,5280,1904,1844,2055,1907,1806,55220,2506,
                         4437,10570,1783,1888,2478,5356,1773,1663,5272,2215,1767,1661,1690]
-
+# listaAssuntos=[2546,2086,1855]
 
 classificadorNB = MultinomialNB()
 classificadorRF = RandomForestClassifier(random_state=42)
-classificadorSVM = CalibratedClassifierCV(LinearSVC(class_weight='balanced', max_iter=10000,random_state=42),method='sigmoid', cv=5)
+classificadorSVM = CalibratedClassifierCV(LinearSVC(class_weight='balanced', max_iter=50000,random_state=42),method='sigmoid', cv=5)
 classificadorMLP = MLPClassifier(early_stopping= True,random_state=42)
 
 nomeAlgoritmoNB='Multinomial Naive Bayes'
@@ -143,13 +129,22 @@ data = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 # for qtdElementosPorAssunto in range(1000000,1000001, 1000000):
 # for qtdElementosPorAssunto in range(10, 11, 10):
 
+# print("=========================================================================")
+# print("Pré-processamento de documentos")
+# print("=========================================================================")
+# path_fonte_de_dados = '/media/DATA/classificadorDeAssuntos/Dados/naoPublicavel/ConferenciaDeAssuntos/OK/'
+# path_destino_de_dados = path_fonte_de_dados
+# processaDocumentos_GloVe(path_fonte_de_dados,path_destino_de_dados)
+# print("Todos os documentos disponíveis foram processados")
+
+
 # ---------------------------------------------------------
 # Recuperando dados
 # ---------------------------------------------------------
-qtdElementosPorAssunto=1000000
+qtdElementosPorAssunto=100000000
 regionais=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]
-df_amostra = recupera_amostras_de_todos_regionais(listaAssuntos, qtdElementosPorAssunto,'/media/DATA/classificadorDeAssuntos/Dados/naoPublicavel/ConferenciaDeAssuntos/OK/')
-
+# df_amostra = recupera_amostras_de_todos_regionais(listaAssuntos, qtdElementosPorAssunto,'/media/DATA/classificadorDeAssuntos/Dados/naoPublicavel/ConferenciaDeAssuntos/OK/')
+df_amostra = recupera_amostras_de_todos_regionais(listaAssuntos, qtdElementosPorAssunto,'/media/DATA/classificadorDeAssuntos/Dados/naoPublicavel/ConferenciaDeAssuntos/OK/','_GLOVE')
 #Juntando os assuntos 55220 e 1855, ambos Indenização por Dano Moral
 df_amostra.loc[df_amostra['cd_assunto_nivel_3'] == 55220, 'cd_assunto_nivel_3'] = 1855
 df_amostra.loc[df_amostra['cd_assunto_nivel_2'] == 55218, 'cd_assunto_nivel_3'] = 2567
@@ -157,6 +152,7 @@ df_amostra.loc[df_amostra['cd_assunto_nivel_2'] == 55218, 'cd_assunto_nivel_3'] 
 print('Total de textos recuperados: ' + str(len(df_amostra)))
 df_amostra = df_amostra.dropna(subset=['texto_stemizado'])
 print('Total de textos recuperados com conteúdo: ' + str(len(df_amostra)))
+
 
 # ---------------------------------------------------------
 #Analisando tamanho dos textos
@@ -186,6 +182,7 @@ sns.boxplot(df_amostra['quantidade_de_palavras'])
 plt.savefig("{0}{1}.png".format(path, "Distribuicao_Tamanho_Textos_Depois_Da_Remocao_De_Textos_Com_Mais_De_400_e_Menos_de_10000"))
 
 
+
 print("=========================================================================")
 print('Total de textos utilizados: ' + str(len(df_amostra)))
 X_train, X_test, y_train, y_test = splitTrainTest(df_amostra)
@@ -193,10 +190,12 @@ print("Amostra de treinamento de " + str(X_train.shape[0]) + " elementos")
 print("=========================================================================")
 title = "Balanceamento de assuntos na amostra de "  + str(X_train.shape[0])
 mostra_balanceamento_assunto(y_train.value_counts(), title, "Quantidade Elementos", "Código Assunto", path, y_train.shape[0])
+
+
 start_time = time.time()
-tfidf_transformer,x_tfidf_train, x_tfidf_test = extraiFeaturesTFIDF(df_amostra,X_train['texto_stemizado'],X_test['texto_stemizado'] ,path)
+x_glove_train, x_glove_test = extraiFeaturesEmbeddings(X_train['texto_stemizado'],X_test['texto_stemizado'])
 total_time = time.time() - start_time
-print("Tempo para montar matrizes TF-IDF (features:  "+ str(x_tfidf_train.shape[1]) + ") :" +   str(timedelta(seconds=total_time)))
+print("Tempo para montar representação a partir de vetores de palavras GloVe usando a média :" +   str(timedelta(seconds=total_time)))
 print("-------------------------------------------------------------------------")
 print(nomeAlgoritmoNB)
 print("-------------------------------------------------------------------------")
@@ -205,19 +204,19 @@ print("-------------------------------------------------------------------------
 #     'estimator__max_samples': [0.8,0.5],
 #     'estimator__base_estimator__alpha': [0.0001, 0.001, 0.01, 0.1, 0.5, 1]
 # }
-param_grid_NB = {
-    'estimator__n_estimators': [5],
-    'estimator__max_samples': [0.8],
-    'estimator__base_estimator__alpha': [0.5]
-}
-n_iterations_grid_search_NB=1
-modeloNB = treina_modelo_grid_search(x_tfidf_train, y_train, classificadorNB, nomeAlgoritmoNB, 'TFIDF', param_grid_NB,n_iterations_grid_search_NB, 1)
-modeloNB, y_pred, y_pred_proba_df = testa_modelo(x_tfidf_test, y_test, modeloNB)
-modeloNB.setIdExecucao(id_execucao)
-modeloNB.setData(data)
-modeloNB.imprime()
-salvaModelo(modeloNB)
-salvaPredicao(modeloNB, X_test, y_test, y_pred,y_pred_proba_df)
+# param_grid_NB = {
+#     'estimator__n_estimators': [5],
+#     'estimator__max_samples': [0.8],
+#     'estimator__base_estimator__alpha': [0.5]
+# }
+# n_iterations_grid_search_NB=1
+# modeloNB = treina_modelo_grid_search(x_glove_train, y_train, classificadorNB, nomeAlgoritmoNB,'GloVe',param_grid_NB,n_iterations_grid_search_NB, 6)
+# modeloNB, y_pred, y_pred_proba_df = testa_modelo(x_glove_test, y_test, modeloNB)
+# modeloNB.setIdExecucao(id_execucao)
+# modeloNB.setData(data)
+# modeloNB.imprime()
+# salvaModelo(modeloNB)
+# salvaPredicao(modeloNB, X_test, y_test, y_pred,y_pred_proba_df)
 
 print("-------------------------------------------------------------------------")
 print(nomeAlgoritmoSVM)
@@ -234,9 +233,9 @@ param_grid_SVM = {
     'estimator__base_estimator__base_estimator__C': [1]
 }
 n_iterations_grid_search_SVM = 1
-modeloSVM = treina_modelo_grid_search(x_tfidf_train, y_train, classificadorSVM, nomeAlgoritmoSVM, 'TFIDF', param_grid_SVM,
-                                      n_iterations_grid_search_SVM, 2)
-modeloSVM, y_pred, y_pred_proba_df = testa_modelo(x_tfidf_test, y_test, modeloSVM)
+modeloSVM = treina_modelo_grid_search(x_glove_train, y_train, classificadorSVM, nomeAlgoritmoSVM,'GloVe', param_grid_SVM,
+                                      n_iterations_grid_search_SVM, 5)
+modeloSVM, y_pred, y_pred_proba_df = testa_modelo(x_glove_test, y_test, modeloSVM)
 modeloSVM.imprime()
 modeloSVM.setIdExecucao(id_execucao)
 modeloSVM.setData(data)
@@ -266,8 +265,8 @@ param_grid_RF = {
     'estimator__base_estimator__max_features': [0.3]
 }
 n_iterations_grid_search_RF = 1
-modeloRF = treina_modelo_grid_search(x_tfidf_train, y_train, classificadorRF, nomeAlgoritmoRF, 'TFIDF',param_grid_RF, n_iterations_grid_search_RF, 2)
-modeloRF, y_pred , y_pred_proba_df= testa_modelo(x_tfidf_test, y_test, modeloRF)
+modeloRF = treina_modelo_grid_search(x_glove_train, y_train, classificadorRF, nomeAlgoritmoRF,'GloVe',param_grid_RF, n_iterations_grid_search_RF, 5)
+modeloRF, y_pred , y_pred_proba_df= testa_modelo(x_glove_test, y_test, modeloRF)
 modeloRF.setIdExecucao(id_execucao)
 modeloRF.setData(data)
 modeloRF.imprime()
@@ -298,8 +297,8 @@ param_grid_MLP = {
     'estimator__base_estimator__max_iter': [400]
 }
 n_iterations_grid_search_MLP = 1
-modeloMLP = treina_modelo_grid_search(x_tfidf_train, y_train, classificadorMLP, nomeAlgoritmoMLP, 'TFIDF',param_grid_MLP,n_iterations_grid_search_MLP, 1)
-modeloMLP,y_pred , y_pred_proba_df= testa_modelo(x_tfidf_test, y_test, modeloMLP)
+modeloMLP = treina_modelo_grid_search(x_glove_train, y_train, classificadorMLP, nomeAlgoritmoMLP,'GloVe',param_grid_MLP,n_iterations_grid_search_MLP, 3)
+modeloMLP,y_pred , y_pred_proba_df= testa_modelo(x_glove_test, y_test, modeloMLP)
 modeloMLP.setIdExecucao(id_execucao)
 modeloMLP.setData(data)
 modeloMLP.imprime()

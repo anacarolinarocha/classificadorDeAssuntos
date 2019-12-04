@@ -19,7 +19,7 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 #------------------------------------------------------------------------------------------
 #Carrega os assuntos e funcoes auxiliares
 #------------------------------------------------------------------------------------------
-arquivo_hierarquia_assuntos = '/home/anarocha/myGit/classificadorDeAssuntos/Dados/hierarquia_de_assuntos.csv'
+arquivo_hierarquia_assuntos = '/media/DATA/classificadorDeAssuntos/Dados/naoPublicavel/hierarquia_de_assuntos.csv'
 assuntos = pd.read_csv(arquivo_hierarquia_assuntos)
 
 assuntos = assuntos.replace(np.nan, 0, regex=True)
@@ -60,25 +60,25 @@ def recuperaAssuntoNivelEspecifico(codigo):
 #------------------------------------------------------------------------------------------
 #Verifica...
 #------------------------------------------------------------------------------------------
-path_predicao = '/home/anarocha/myGit/classificadorDeAssuntos/Resultados/EXP20_MelhoresModelos_LSI250_TextosReduzidos_v2/'
+path_predicao = '/media/DATA/classificadorDeAssuntos/Dados/Resultados/EXP25_MelhoresModelos_TextsoReduzidos_BM25/'
 
 
-nome_arquivo_predicao_MLP = path_predicao + 'predicao_Multi-Layer Perceptron.csv'
-# nome_arquivo_predicao_MNB = path_predicao + 'predicao_Multinomial Naive Bayes.csv'
-# nome_arquivo_predicao_RF = path_predicao + 'predicao_Random Forest.csv'
+# nome_arquivo_predicao_MLP = path_predicao + 'predicao_LSI250_Multi-Layer Perceptron.csv'
+nome_arquivo_predicao_MNB = path_predicao + 'predicao_BM25_Multinomial Naive Bayes.csv'
+nome_arquivo_predicao_RF = path_predicao + 'predicao_BM25_Random Forest.csv'
 # nome_arquivo_predicao_SVM = path_predicao + 'predicao_SVM.csv'
 
-df_predito_MLP = pd.read_csv(nome_arquivo_predicao_MLP, sep=',')
-# df_predito_MNB = pd.read_csv(nome_arquivo_predicao_MNB, sep=',')
-# df_predito_RF = pd.read_csv(nome_arquivo_predicao_RF, sep=',')
+# df_predito_MLP = pd.read_csv(nome_arquivo_predicao_MLP, sep=',')
+df_predito_MNB = pd.read_csv(nome_arquivo_predicao_MNB, sep=',')
+df_predito_RF = pd.read_csv(nome_arquivo_predicao_RF, sep=',')
 # df_predito_SVM = pd.read_csv(nome_arquivo_predicao_SVM, sep=',')
 
 path = '/media/DATA/classificadorDeAssuntos/Dados/naoPublicavel/ConferenciaDeAssuntos/OK/'
 
 
-df_resultado_analise_MLP = []
-# df_resultado_analise_MNB = []
-# df_resultado_analise_RF = []
+# df_resultado_analise_MLP = []
+df_resultado_analise_MNB = []
+df_resultado_analise_RF = []
 # df_resultado_analise_SVM = []
 
 # listaregionais=[20]
@@ -94,9 +94,9 @@ for i in range (1,25):
     df_assuntos_2g_trt =  pd.read_csv(path + nome_arquivo_2g_trt, sep=',')
 
 
-    df_processos_preditos_trt_MLP = df_predito_MLP[(df_predito_MLP.sigla_trt == 'TRT' + sigla_trt)]
-    # df_processos_preditos_trt_MNB = df_predito_MNB[(df_predito_MNB.sigla_trt == 'TRT' + sigla_trt)]
-    # df_processos_preditos_trt_RF = df_predito_RF[(df_predito_RF.sigla_trt == 'TRT' + sigla_trt)]
+    # df_processos_preditos_trt_MLP = df_predito_MLP[(df_predito_MLP.sigla_trt == 'TRT' + sigla_trt)]
+    df_processos_preditos_trt_MNB = df_predito_MNB[(df_predito_MNB.sigla_trt == 'TRT' + sigla_trt)]
+    df_processos_preditos_trt_RF = df_predito_RF[(df_predito_RF.sigla_trt == 'TRT' + sigla_trt)]
     # df_processos_preditos_trt_SVM = df_predito_SVM[(df_predito_SVM.sigla_trt == 'TRT' + sigla_trt)]
 
     # df_processos_preditos_trt_MLP = df_processos_preditos_trt_MLP.head(5)
@@ -105,7 +105,7 @@ for i in range (1,25):
     # df_processos_preditos_trt_SVM = df_processos_preditos_trt_SVM.head(5)
 
     start_time = time.time()
-    for index, row in df_processos_preditos_trt_MLP.iterrows():
+    for index, row in df_processos_preditos_trt_MNB.iterrows():
         # print('----------------------------------------------------------------------')
         # print('PROCESSO: ' + df_processos_preditos_trt_MLP.loc[index]['nr_processo'])
 
@@ -117,15 +117,17 @@ for i in range (1,25):
         qnd_assuntos_no_2_grau_dentro_do_escopo = len(assuntos_existentes_dentro_do_escopo)
 
         #pega os n assuntos preditos mais provaveis
-        row_predictions_MLP = pd.to_numeric(df_processos_preditos_trt_MLP.loc[index].tail(36).head(35))
-        # row_predictions_MNB = pd.to_numeric(df_processos_preditos_trt_MNB.loc[index].tail(36).head(35))
-        # row_predictions_RF = pd.to_numeric(df_processos_preditos_trt_RF.loc[index].tail(36).head(35))
+        # row_predictions_MLP = pd.to_numeric(df_processos_preditos_trt_MLP.loc[index].tail(36).head(35))
+        row_predictions_MNB = pd.to_numeric(df_processos_preditos_trt_MNB.loc[index].tail(36).head(35))
+        row_predictions_RF = pd.to_numeric(df_processos_preditos_trt_RF.loc[index].tail(36).head(35))
         # row_predictions_SVM = pd.to_numeric(df_processos_preditos_trt_SVM.loc[index].tail(36).head(35))
 
-        row_predictions = [(row_predictions_MLP,df_resultado_analise_MLP,df_processos_preditos_trt_MLP.loc[index])
+        row_predictions = [
+                            #(row_predictions_MLP,df_resultado_analise_MLP,df_processos_preditos_trt_MLP.loc[index])
                             # ,
-                           # (row_predictions_MNB, df_resultado_analise_MNB, df_processos_preditos_trt_MNB.loc[index]),
-                           # (row_predictions_RF, df_resultado_analise_RF, df_processos_preditos_trt_RF.loc[index]),
+                           (row_predictions_MNB, df_resultado_analise_MNB, df_processos_preditos_trt_MNB.loc[index]),
+                           (row_predictions_RF, df_resultado_analise_RF, df_processos_preditos_trt_RF.loc[index])
+                            #,
                            # (row_predictions_SVM, df_resultado_analise_SVM, df_processos_preditos_trt_SVM.loc[index])
                            ]
 
@@ -170,31 +172,33 @@ for i in range (1,25):
     print("Tempo para recuperar dados do TRT " + sigla_trt + ': ' + str(timedelta(seconds=total_time)))
 
 colunas = ['sigla_trt', 'nr_processo', 'id_processo_documento','qnd_assuntos_no_2_grau','qnd_assuntos_no_2_grau_dentro_do_escopo','n5_acerto','n5_percent','n5_percent_dentro_do_escopo','n10_acerto','n10_percent','n10_percent_dentro_do_escopo','assuntos_existentes','assuntos_existentes_dentro_do_escopo','n5_assuntos_mais_provaveis','n5_assuntos_que_acertou','n10_assuntos_mais_provaveis','n10_assuntos_que_acertou']
-df_final_MLP = pd.DataFrame(df_resultado_analise_MLP, columns=colunas)
-# df_final_MNB = pd.DataFrame(df_resultado_analise_MNB, columns=colunas)
-# df_final_RF = pd.DataFrame(df_resultado_analise_RF, columns=colunas)
+# df_final_MLP = pd.DataFrame(df_resultado_analise_MLP, columns=colunas)
+df_final_MNB = pd.DataFrame(df_resultado_analise_MNB, columns=colunas)
+df_final_RF = pd.DataFrame(df_resultado_analise_RF, columns=colunas)
 # df_final_SVM = pd.DataFrame(df_resultado_analise_SVM, columns=colunas)
 
-nome_arquivo_predicao_avaliado_MLP = path_predicao + 'predicao_multilabel_avaliada_MLP.csv'
-# nome_arquivo_predicao_avaliado_MNB = path_predicao + 'predicao_multilabel_avaliada_MNB.csv'
-# nome_arquivo_predicao_avaliado_RF = path_predicao + 'predicao_multilabel_avaliada_RF.csv'
+# nome_arquivo_predicao_avaliado_MLP = path_predicao + 'predicao_multilabel_avaliada_MLP.csv'
+nome_arquivo_predicao_avaliado_MNB = path_predicao + 'predicao_multilabel_avaliada_MNB.csv'
+nome_arquivo_predicao_avaliado_RF = path_predicao + 'predicao_multilabel_avaliada_RF.csv'
 # nome_arquivo_predicao_avaliado_SVM = path_predicao + 'predicao_multilabel_avaliada_SVM.csv'
 
-df_final_MLP.to_csv(nome_arquivo_predicao_avaliado_MLP, sep='#',decimal=",")
-# df_final_MNB.to_csv(nome_arquivo_predicao_avaliado_MNB, sep='#',decimal=",")
-# df_final_RF.to_csv(nome_arquivo_predicao_avaliado_RF, sep='#',decimal=",")
+# df_final_MLP.to_csv(nome_arquivo_predicao_avaliado_MLP, sep='#',decimal=",")
+df_final_MNB.to_csv(nome_arquivo_predicao_avaliado_MNB, sep='#',decimal=",")
+df_final_RF.to_csv(nome_arquivo_predicao_avaliado_RF, sep='#',decimal=",")
 # df_final_SVM.to_csv(nome_arquivo_predicao_avaliado_SVM, sep='#',decimal=",")
 
 # df_final = pd.read_csv(nome_arquivo_predicao_avaliado, sep='#',decimal=",")
 # df_final.columns
 
 
-df_finais = [(df_final_MLP,'MLP')
+df_finais = [
+            # (df_final_MLP,'MLP')
                 # ,
-            # (df_final_MNB,'MNB'),
-            # (df_final_RF,'RF'),
+            (df_final_MNB,'MNB'),
+            (df_final_RF,'RF')
+            # ,
             # (df_final_SVM,'SVM')
-                         ]
+]
 
 for df_final in df_finais:
 
