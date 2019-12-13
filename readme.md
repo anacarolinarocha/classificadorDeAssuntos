@@ -62,12 +62,19 @@ Tabela Processual Unificada:
 PS: O assunto de código **55220** (Indenização por Dano Moral) será agrupado com o assunto **1855** (Indenização por 
 Dano Moral)
 
-### Exemplo de utilização 
+### Utilização 
 
-1) Acessar o diretório **Código**
+#### Jupyter Notebook
+
+1) Acessar o caderno **ClassificadorAssuntos.ipynb**
+2) Alterar a sexta célula, indicando as pastas a serem utilizadas
+
+#### Código python
+
+1) Acessar o diretório do arquivo **ClassificadorAssuntos.py**
 2) Rodar a linha de comando abaixo
 
-**`python buscaMelhorModelo.py -dd /path/dos/documentos -dr /path/dos/resultados`**
+**`python ClassificadorAssuntos.py -dd /path/dos/documentos -dr /path/dos/resultados`**
 
 Onde:
 
