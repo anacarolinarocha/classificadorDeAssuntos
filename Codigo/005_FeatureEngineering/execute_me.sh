@@ -1,2 +1,0 @@
-python ~/myGit/classificadorDeAssuntos/Codigo/005_FeatureEngineering/_001_Processa_Texto.py
-python ~/myGit/classificadorDeAssuntos/Codigo/003_EncontraTamanhoAmostra/_002_Analisa_Tamanho_Amostra.py
